@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:not_uber/src/ui/home_page.dart';
+import 'package:not_uber/src/ui/login_page.dart';
 
 class AppWidget extends StatelessWidget {
   const AppWidget({super.key});
@@ -11,7 +11,7 @@ class AppWidget extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
       ),
-      home: HomePage(),
+      home: LoginPage(),
     );
   }
 }
