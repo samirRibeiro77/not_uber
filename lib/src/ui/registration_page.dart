@@ -22,9 +22,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   bool _passwordObscure = true;
   bool _isDriver = false;
+  bool _loading = false;
   String _errorMessage = "";
 
   _validateFields() {
+    setState(() {
+      _loading = true;
+    });
     var user = UberUser(
       name: _nameController.text,
       email: _emailController.text,
@@ -36,6 +40,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     if (error.isNotEmpty) {
       setState(() {
         _errorMessage = error;
+        _loading = false;
       });
       return;
     }
@@ -51,11 +56,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
         )
         .then((fbUser) {
           _saveUser(firebaseUser: fbUser.user!, uberUser: user);
-        }).catchError((e) {
+        })
+        .catchError((e) {
           setState(() {
             _errorMessage = "Error creating user: ${e.toString()}";
+            _loading = false;
           });
-    });
+        });
   }
 
   _saveUser({required User firebaseUser, required UberUser uberUser}) {
@@ -68,6 +75,10 @@ class _RegistrationPageState extends State<RegistrationPage> {
   }
 
   _goToHome(bool isDriver) {
+    setState(() {
+      _loading = false;
+    });
+
     var homePage = isDriver
         ? RouteGenerator.driverHome
         : RouteGenerator.passengerHome;
@@ -78,9 +89,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Registration"),
-      ),
+      appBar: AppBar(title: Text("Registration")),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -161,6 +170,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
               ),
             ),
             SizedBox(child: Container(height: 32)),
+            _loading ? CircularProgressIndicator() : Container(),
             Center(
               child: Text(
                 _errorMessage,

@@ -1,8 +1,8 @@
 class UberUser {
-  String name;
-  String email;
+  late String name;
+  late String email;
   String? _password;
-  bool isDriver;
+  late bool isDriver;
 
   UberUser({
     this.name = "",
@@ -11,6 +11,17 @@ class UberUser {
     String password = "",
   }) {
     _password = password;
+  }
+
+
+  UberUser.fromFirebase({Map<String, dynamic>? map}) {
+    if (map == null) {
+      throw Exception("UberUser needs to be initialized correctly");
+    }
+
+    name = map["name"] ?? "";
+    email = map["email"] ?? "";
+    isDriver = map["isDriver"] ?? false;
   }
 
   String validateUser({

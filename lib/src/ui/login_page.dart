@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:not_uber/src/helper/firebase_helper.dart';
 import 'package:not_uber/src/helper/route_generator.dart';
 import 'package:not_uber/src/model/uber_user.dart';
 
@@ -12,14 +14,20 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _auth = FirebaseAuth.instance;
+  final _db = FirebaseFirestore.instance;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _passwordObscure = true;
   String _errorMessage = "";
+  bool _loading = false;
 
   _validateFields() {
+    setState(() {
+      _loading = true;
+    });
+
     var user = UberUser(
       email: _emailController.text,
       password: _passwordController.text,
@@ -29,6 +37,7 @@ class _LoginPageState extends State<LoginPage> {
     if (error.isNotEmpty) {
       setState(() {
         _errorMessage = error;
+        _loading = false;
       });
       return;
     }
@@ -40,16 +49,32 @@ class _LoginPageState extends State<LoginPage> {
     _auth
         .signInWithEmailAndPassword(email: user.email, password: user.password)
         .then((fbUser) {
-          _goToHome(false);
+          _getUserData(fbUser.user!.uid);
         })
         .catchError((e) {
           setState(() {
             _errorMessage = "Check your email and password, then try again";
+            _loading = false;
           });
         });
   }
 
+  _getUserData(String uid) async {
+    var snapshot = await _db
+        .collection(FirebaseHelper.collections.user)
+        .doc(uid)
+        .get();
+
+    var user = UberUser.fromFirebase(map: snapshot.data());
+
+    _goToHome(user.isDriver);
+  }
+
   _goToHome(bool isDriver) {
+    setState(() {
+      _loading = false;
+    });
+
     var homePage = isDriver
         ? RouteGenerator.driverHome
         : RouteGenerator.passengerHome;
@@ -75,6 +100,9 @@ class _LoginPageState extends State<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Image.asset("assets/images/logo.png", width: 200, height: 150),
+                _loading
+                    ? CircularProgressIndicator(backgroundColor: Colors.white)
+                    : Container(),
                 SizedBox(child: Container(height: 32)),
                 TextField(
                   controller: _emailController,
