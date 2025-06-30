@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:not_uber/src/helpers/route_generator.dart';
 import 'package:not_uber/src/ui/registration_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -96,11 +97,8 @@ class _LoginPageState extends State<LoginPage> {
                 SizedBox(child: Container(height: 8)),
                 Center(
                   child: GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => RegistrationPage(),
-                      ),
+                    onTap: () => Navigator.pushNamed(
+                      context, RouteGenerator.register,
                     ),
                     child: Text(
                       "Don't have an account? Sign up",
