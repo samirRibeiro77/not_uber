@@ -1,4 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:not_uber/src/helper/firebase_helper.dart';
+import 'package:not_uber/src/helper/route_generator.dart';
+import 'package:not_uber/src/model/uber_user.dart';
 
 class RegistrationPage extends StatefulWidget {
   const RegistrationPage({super.key});
@@ -8,6 +13,9 @@ class RegistrationPage extends StatefulWidget {
 }
 
 class _RegistrationPageState extends State<RegistrationPage> {
+  final _auth = FirebaseAuth.instance;
+  final _db = FirebaseFirestore.instance;
+
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -15,6 +23,56 @@ class _RegistrationPageState extends State<RegistrationPage> {
   bool _passwordObscure = true;
   bool _isDriver = false;
   String _errorMessage = "";
+
+  _validateFields() {
+    var user = UberUser(
+      name: _nameController.text,
+      email: _emailController.text,
+      isDriver: _isDriver,
+    );
+
+    var error = user.validateUser();
+    if (error.isNotEmpty) {
+      setState(() {
+        _errorMessage = error;
+      });
+      return;
+    }
+
+    _createUser(user);
+  }
+
+  _createUser(UberUser user) {
+    _auth
+        .createUserWithEmailAndPassword(
+          email: user.email,
+          password: user.password,
+        )
+        .then((fbUser) {
+          _saveUser(firebaseUser: fbUser.user!, uberUser: user);
+        }).catchError((e) {
+          setState(() {
+            _errorMessage = "Error creating user: ${e.toString()}";
+          });
+    });
+  }
+
+  _saveUser({required User firebaseUser, required UberUser uberUser}) {
+    _db
+        .collection(FirebaseHelper.collections.user)
+        .doc(firebaseUser.uid)
+        .set(uberUser.toMap());
+
+    _goToHome(uberUser.isDriver);
+  }
+
+  _goToHome(bool isDriver) {
+    var homePage = isDriver
+        ? RouteGenerator.driverHome
+        : RouteGenerator.passengerHome;
+
+    Navigator.pushNamedAndRemoveUntil(context, homePage, (_) => false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,8 +94,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
               decoration: InputDecoration(
                 contentPadding: EdgeInsets.fromLTRB(32, 16, 32, 16),
                 hintText: "Full name",
-                filled: true,
-                fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -51,8 +107,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
               decoration: InputDecoration(
                 contentPadding: EdgeInsets.fromLTRB(32, 16, 32, 16),
                 hintText: "E-mail",
-                filled: true,
-                fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -67,17 +121,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
               decoration: InputDecoration(
                 contentPadding: EdgeInsets.fromLTRB(32, 16, 32, 16),
                 hintText: "Password",
-                filled: true,
-                fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
                 suffixIcon: IconButton(
                   padding: EdgeInsets.only(right: 8),
                   icon: Icon(
-                    _passwordObscure
-                        ? Icons.visibility
-                        : Icons.visibility_off,
+                    _passwordObscure ? Icons.visibility : Icons.visibility_off,
                   ),
                   onPressed: () {
                     setState(() {
@@ -105,7 +155,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             ),
             SizedBox(child: Container(height: 16)),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: _validateFields,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xff1ebbd8),
                 padding: EdgeInsets.fromLTRB(32, 16, 32, 16),

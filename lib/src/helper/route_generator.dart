@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:not_uber/src/ui/home_page.dart';
+import 'package:not_uber/src/ui/driver_home_page.dart';
 import 'package:not_uber/src/ui/login_page.dart';
+import 'package:not_uber/src/ui/passenger_home_page.dart';
 import 'package:not_uber/src/ui/registration_page.dart';
 
 class RouteGenerator {
   static const String initial = "/";
   static const String login = "/login";
   static const String register = "/register";
-  static const String home = "/home";
+  static const String driverHome = "/driver_home";
+  static const String passengerHome = "/passenger_home";
 
   static Route<dynamic> generateRoutes(RouteSettings routeSettings) {
     switch (routeSettings.name) {
@@ -17,8 +19,10 @@ class RouteGenerator {
         return MaterialPageRoute(builder: (_) => LoginPage());
       case register:
         return MaterialPageRoute(builder: (_) => RegistrationPage());
-      case home:
-        return MaterialPageRoute(builder: (_) => HomePage());
+      case driverHome:
+        return MaterialPageRoute(builder: (_) => DriverHomePage());
+      case passengerHome:
+        return MaterialPageRoute(builder: (_) => PassengerHomePage());
       default:
         return _errorRoute();
     }

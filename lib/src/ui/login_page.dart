@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:not_uber/src/helpers/route_generator.dart';
-import 'package:not_uber/src/ui/registration_page.dart';
+import 'package:not_uber/src/helper/route_generator.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
