@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:not_uber/src/ui/home_page/home_appbar.dart';
 
 class PassengerHomePage extends StatefulWidget {
   const PassengerHomePage({super.key});
@@ -10,10 +11,9 @@ class PassengerHomePage extends StatefulWidget {
 class _PassengerHomePageState extends State<PassengerHomePage> {
   @override
   Widget build(BuildContext context) {
+    print(kToolbarHeight);
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Passageiro"),
-      ),
+      appBar: HomeAppbar(title: "Passenger")
     );
   }
 }

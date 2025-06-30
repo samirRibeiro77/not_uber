@@ -28,6 +28,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     var user = UberUser(
       name: _nameController.text,
       email: _emailController.text,
+      password: _passwordController.text,
       isDriver: _isDriver,
     );
 
@@ -79,8 +80,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text("Registration"),
-        backgroundColor: Colors.blueGrey[700],
-        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),
@@ -156,13 +155,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
             SizedBox(child: Container(height: 16)),
             ElevatedButton(
               onPressed: _validateFields,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xff1ebbd8),
-                padding: EdgeInsets.fromLTRB(32, 16, 32, 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
               child: Text(
                 "Sign up",
                 style: TextStyle(color: Colors.white, fontSize: 20),

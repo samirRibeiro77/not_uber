@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:not_uber/src/helper/route_generator.dart';
+import 'package:not_uber/src/model/uber_user.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -9,11 +11,51 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final _auth = FirebaseAuth.instance;
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _passwordObscure = true;
   String _errorMessage = "";
+
+  _validateFields() {
+    var user = UberUser(
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
+
+    var error = user.validateUser(validateName: false);
+    if (error.isNotEmpty) {
+      setState(() {
+        _errorMessage = error;
+      });
+      return;
+    }
+
+    _login(user);
+  }
+
+  _login(UberUser user) {
+    _auth
+        .signInWithEmailAndPassword(email: user.email, password: user.password)
+        .then((fbUser) {
+          _goToHome(false);
+        })
+        .catchError((e) {
+          setState(() {
+            _errorMessage = "Check your email and password, then try again";
+          });
+        });
+  }
+
+  _goToHome(bool isDriver) {
+    var homePage = isDriver
+        ? RouteGenerator.driverHome
+        : RouteGenerator.passengerHome;
+
+    Navigator.pushReplacementNamed(context, homePage);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,14 +122,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 SizedBox(child: Container(height: 16)),
                 ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xff1ebbd8),
-                    padding: EdgeInsets.fromLTRB(32, 16, 32, 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
+                  onPressed: _validateFields,
                   child: Text(
                     "Login",
                     style: TextStyle(color: Colors.white, fontSize: 20),
@@ -96,9 +131,8 @@ class _LoginPageState extends State<LoginPage> {
                 SizedBox(child: Container(height: 8)),
                 Center(
                   child: GestureDetector(
-                    onTap: () => Navigator.pushNamed(
-                      context, RouteGenerator.register,
-                    ),
+                    onTap: () =>
+                        Navigator.pushNamed(context, RouteGenerator.register),
                     child: Text(
                       "Don't have an account? Sign up",
                       style: TextStyle(color: Colors.white, fontSize: 20),
