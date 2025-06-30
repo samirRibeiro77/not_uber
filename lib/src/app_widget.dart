@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:not_uber/src/helpers/app_theme_data.dart';
 import 'package:not_uber/src/ui/login_page.dart';
 
 class AppWidget extends StatelessWidget {
@@ -8,9 +9,7 @@ class AppWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: "Not Uber",
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
-      ),
+      theme: AppThemeData.defaultTheme,
       home: LoginPage(),
     );
   }
