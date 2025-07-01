@@ -21,9 +21,10 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
       appBar: HomeAppbar(title: "Passenger"),
       body: GoogleMap(
         mapType: MapType.normal,
+        myLocationEnabled: true,
         initialCameraPosition: CameraPosition(
           target: LatLng(-22.92584646807185, -43.17913837568963),
-          zoom: 16
+          zoom: 16,
         ),
         onMapCreated: (GoogleMapController controller) {
           _mapController.complete(controller);
