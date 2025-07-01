@@ -16,7 +16,7 @@ class HomeAppbar extends StatelessWidget implements PreferredSizeWidget {
         break;
       case "Logout":
         _auth.signOut();
-        Navigator.pushReplacementNamed(context, RouteGenerator.initial);
+        Navigator.pushReplacementNamed(context, RouteGenerator.login);
         break;
     }
   }

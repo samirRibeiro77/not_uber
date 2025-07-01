@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:not_uber/src/helper/app_theme_data.dart';
 import 'package:not_uber/src/helper/route_generator.dart';
-import 'package:not_uber/src/ui/login_page.dart';
+import 'package:not_uber/src/splashscreen.dart';
 
 class AppWidget extends StatelessWidget {
   const AppWidget({super.key});
@@ -13,7 +13,7 @@ class AppWidget extends StatelessWidget {
       theme: AppThemeData.defaultTheme,
       initialRoute: RouteGenerator.initial,
       onGenerateRoute: RouteGenerator.generateRoutes,
-      home: LoginPage(),
+      home: Splashscreen(),
     );
   }
 }
