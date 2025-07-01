@@ -170,7 +170,16 @@ class _RegistrationPageState extends State<RegistrationPage> {
               ),
             ),
             SizedBox(child: Container(height: 32)),
-            _loading ? CircularProgressIndicator() : Container(),
+            _loading
+                ? Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        backgroundColor: Colors.white,
+                      ),
+                    ),
+                  )
+                : Container(),
             Center(
               child: Text(
                 _errorMessage,

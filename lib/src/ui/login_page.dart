@@ -101,7 +101,14 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 Image.asset("assets/images/logo.png", width: 200, height: 150),
                 _loading
-                    ? CircularProgressIndicator(backgroundColor: Colors.white)
+                    ? Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            backgroundColor: Colors.white,
+                          ),
+                        ),
+                      )
                     : Container(),
                 SizedBox(child: Container(height: 32)),
                 TextField(
