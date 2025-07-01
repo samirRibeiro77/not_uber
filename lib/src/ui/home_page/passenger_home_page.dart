@@ -40,10 +40,10 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
 
     Geolocator.getPositionStream(locationSettings: settings).listen((position) {
       _moveCamera(
-          CameraPosition(
-            target: LatLng(position.latitude, position.longitude),
-            zoom: 16,
-          )
+        CameraPosition(
+          target: LatLng(position.latitude, position.longitude),
+          zoom: 16,
+        ),
       );
     });
   }
@@ -58,22 +58,103 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
 
   @override
   void initState() {
-    _getUserLocation();
     super.initState();
+    _getUserLocation();
     _createLocationListener();
   }
 
   @override
   Widget build(BuildContext context) {
+    print("Bottom insets: ${MediaQuery.of(context).viewInsets.bottom}");
     return Scaffold(
       appBar: HomeAppbar(title: "Passenger"),
-      body: GoogleMap(
-        mapType: MapType.normal,
-        myLocationEnabled: true,
-        initialCameraPosition: _cameraPosition,
-        onMapCreated: (GoogleMapController controller) {
-          _mapController.complete(controller);
-        },
+      body: Stack(
+        children: [
+          GoogleMap(
+            mapType: MapType.normal,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: false,
+            initialCameraPosition: _cameraPosition,
+            onMapCreated: (GoogleMapController controller) {
+              _mapController.complete(controller);
+            },
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Padding(
+              padding: EdgeInsets.all(10),
+              child: Container(
+                height: 50,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(3),
+                  color: Colors.white,
+                ),
+                child: TextField(
+                  readOnly: true,
+                  keyboardType: TextInputType.streetAddress,
+                  decoration: InputDecoration(
+                    icon: Container(
+                      margin: EdgeInsets.only(left: 20),
+                      child: Icon(Icons.location_on, color: Colors.green),
+                    ),
+                    contentPadding: EdgeInsets.only(left: 15),
+                    hintText: "My location",
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 55,
+            left: 0,
+            right: 0,
+            child: Padding(
+              padding: EdgeInsets.all(10),
+              child: Container(
+                height: 50,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(3),
+                  color: Colors.white,
+                ),
+                child: TextField(
+                  controller: null,
+                  keyboardType: TextInputType.streetAddress,
+                  decoration: InputDecoration(
+                    icon: Container(
+                      margin: EdgeInsets.only(left: 20),
+                      child: Icon(Icons.local_taxi, color: Colors.black,),
+                    ),
+                    contentPadding: EdgeInsets.only(left: 15),
+                    hintText: "Destination",
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+              bottom: 25,
+              left: 0,
+              right: 0,
+              child: Padding(
+                  padding: EdgeInsets.all(10),
+                  child: ElevatedButton(
+                    onPressed: (){},
+                    child: Text(
+                      "Call an uber",
+                      style: TextStyle(color: Colors.white, fontSize: 20),
+                    ),
+                  ),
+              )
+          )
+        ],
       ),
     );
   }
