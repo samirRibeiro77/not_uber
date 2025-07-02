@@ -16,11 +16,13 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   final _mapController = Completer<GoogleMapController>();
 
   var _cameraPosition = CameraPosition(target: LatLng(0, 0));
+  final Set<Marker> _markers = {};
 
   _getUserLocation() async {
     var lastPosition = await Geolocator.getLastKnownPosition();
 
     if (lastPosition != null) {
+      _showUserMarker(lastPosition);
       _moveCamera(
         CameraPosition(
           target: LatLng(lastPosition.latitude, lastPosition.longitude),
@@ -39,12 +41,34 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     );
 
     Geolocator.getPositionStream(locationSettings: settings).listen((position) {
+      _showUserMarker(position);
       _moveCamera(
         CameraPosition(
           target: LatLng(position.latitude, position.longitude),
           zoom: 16,
         ),
       );
+    });
+  }
+
+  _showUserMarker(Position position) async {
+    var ratio = MediaQuery.of(context).devicePixelRatio;
+    var passengerIcon = await BitmapDescriptor.asset(
+        ImageConfiguration(devicePixelRatio: ratio),
+        "assets/images/passenger.png"
+    );
+
+    var passengerMarker = Marker(
+        markerId: MarkerId("passenger-marker"),
+      position: LatLng(position.latitude, position.longitude),
+      infoWindow: InfoWindow(
+        title: "My local"
+      ),
+      icon: passengerIcon
+    );
+
+    setState(() {
+      _markers.add(passengerMarker);
     });
   }
 
@@ -65,16 +89,15 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    print("Bottom insets: ${MediaQuery.of(context).viewInsets.bottom}");
     return Scaffold(
       appBar: HomeAppbar(title: "Passenger"),
       body: Stack(
         children: [
           GoogleMap(
             mapType: MapType.normal,
-            myLocationEnabled: true,
             myLocationButtonEnabled: false,
             initialCameraPosition: _cameraPosition,
+            markers: _markers,
             onMapCreated: (GoogleMapController controller) {
               _mapController.complete(controller);
             },
@@ -140,7 +163,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
             ),
           ),
           Positioned(
-              bottom: 25,
+              bottom: MediaQuery.of(context).viewInsets.bottom == 0 ? 25 : 0,
               left: 0,
               right: 0,
               child: Padding(
