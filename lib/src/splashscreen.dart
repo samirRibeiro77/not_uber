@@ -12,12 +12,11 @@ class Splashscreen extends StatelessWidget {
   final _db = FirebaseFirestore.instance;
 
   _redirect(BuildContext context) async {
-    var firebaseUser = await _auth.currentUser;
-    if (firebaseUser == null) {
+    if (_auth.currentUser == null) {
       Navigator.pushReplacementNamed(context, RouteGenerator.login);
     }
 
-    var homePage = await _getHomePageName(firebaseUser!.uid);
+    var homePage = await _getHomePageName(_auth.currentUser!.uid);
     Navigator.pushReplacementNamed(context, homePage);
   }
 
@@ -30,8 +29,8 @@ class Splashscreen extends StatelessWidget {
     var user = UberUser.fromFirebase(map: snapshot.data());
 
     return user.isDriver
-        ? RouteGenerator.driverHome
-        : RouteGenerator.passengerHome;
+        ? Future.value(RouteGenerator.driverHome)
+        : Future.value(RouteGenerator.passengerHome);
   }
 
   @override

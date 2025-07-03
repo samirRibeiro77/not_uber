@@ -1,4 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:not_uber/src/helper/firebase_helper.dart';
+
 class UberUser {
+  late DocumentReference? ref;
   late String name;
   late String email;
   String? _password;
@@ -13,8 +18,7 @@ class UberUser {
     _password = password;
   }
 
-
-  UberUser.fromFirebase({Map<String, dynamic>? map}) {
+  UberUser.fromFirebase({this.ref, Map<String, dynamic>? map}) {
     if (map == null) {
       throw Exception("UberUser needs to be initialized correctly");
     }
@@ -22,6 +26,15 @@ class UberUser {
     name = map["name"] ?? "";
     email = map["email"] ?? "";
     isDriver = map["isDriver"] ?? false;
+  }
+
+  static Future<UberUser> current() async {
+    var snapshot = await FirebaseFirestore.instance
+        .collection(FirebaseHelper.collections.user)
+        .doc(FirebaseAuth.instance.currentUser?.uid)
+        .get();
+
+    return UberUser.fromFirebase(map: snapshot.data(), ref: snapshot.reference);
   }
 
   String validateUser({

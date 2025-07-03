@@ -7,4 +7,6 @@ class FirebaseHelpersCollections {
   const FirebaseHelpersCollections();
 
   String get user => "Uber-User";
+
+  String get request => "Uber-Request";
 }

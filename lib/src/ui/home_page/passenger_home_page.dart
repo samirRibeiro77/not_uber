@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:not_uber/src/helper/firebase_helper.dart';
 import 'package:not_uber/src/helper/location_helper.dart';
 import 'package:not_uber/src/model/destination.dart';
+import 'package:not_uber/src/model/uber_request.dart';
+import 'package:not_uber/src/model/uber_user.dart';
 import 'package:not_uber/src/ui/home_page/home_appbar.dart';
 
 class PassengerHomePage extends StatefulWidget {
@@ -15,6 +19,8 @@ class PassengerHomePage extends StatefulWidget {
 }
 
 class _PassengerHomePageState extends State<PassengerHomePage> {
+  final _db = FirebaseFirestore.instance;
+
   final _mapController = Completer<GoogleMapController>();
   final _destinationController = TextEditingController();
 
@@ -118,31 +124,41 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
 
   _callUberConfirmationDialog(Destination destination) {
     showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text("Confirm address"),
-            content: Text(destination.toString()),
-            contentPadding: EdgeInsets.all(16),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text("Cancel", style: TextStyle(color: Colors.red))
-              ),
-              TextButton(
-                  onPressed: () {
-                    _saveRide();
-                    Navigator.pop(context);
-                  },
-                  child: Text("Confirm", style: TextStyle(color: Colors.green))
-              ),
-            ],
-          );
-        }
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Confirm address"),
+          content: Text(destination.toString()),
+          contentPadding: EdgeInsets.all(16),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("Cancel", style: TextStyle(color: Colors.red)),
+            ),
+            TextButton(
+              onPressed: () {
+                _requestRide(destination);
+                Navigator.pop(context);
+              },
+              child: Text("Confirm", style: TextStyle(color: Colors.green)),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  _saveRide(){}
+  _requestRide(Destination destination) async {
+    var passenger = await UberUser.current();
+    var driverRequest = UberRequest(
+      destination: destination,
+      passenger: passenger.ref!,
+    );
+
+    _db
+        .collection(FirebaseHelper.collections.request)
+        .add(driverRequest.toJson());
+  }
 
   @override
   void initState() {
@@ -216,7 +232,9 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
                   decoration: InputDecoration(
                     icon: Container(
                       margin: EdgeInsets.only(left: 20),
-                      child: _loading ? CircularProgressIndicator() : Icon(Icons.local_taxi, color: Colors.black),
+                      child: _loading
+                          ? CircularProgressIndicator()
+                          : Icon(Icons.local_taxi, color: Colors.black),
                     ),
                     contentPadding: EdgeInsets.only(left: 15),
                     hintText: "Destination",
