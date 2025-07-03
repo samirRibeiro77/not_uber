@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:not_uber/src/helper/location_helper.dart';
+import 'package:not_uber/src/model/destination.dart';
 import 'package:not_uber/src/ui/home_page/home_appbar.dart';
 
 class PassengerHomePage extends StatefulWidget {
@@ -14,9 +16,11 @@ class PassengerHomePage extends StatefulWidget {
 
 class _PassengerHomePageState extends State<PassengerHomePage> {
   final _mapController = Completer<GoogleMapController>();
+  final _destinationController = TextEditingController();
 
   var _cameraPosition = CameraPosition(target: LatLng(0, 0));
   final Set<Marker> _markers = {};
+  var _loading = false;
 
   _getUserLocation() async {
     var lastPosition = await Geolocator.getLastKnownPosition();
@@ -54,17 +58,16 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   _showUserMarker(Position position) async {
     var ratio = MediaQuery.of(context).devicePixelRatio;
     var passengerIcon = await BitmapDescriptor.asset(
-        ImageConfiguration(devicePixelRatio: ratio),
-        "assets/images/passenger.png"
+      ImageConfiguration(devicePixelRatio: ratio),
+      "assets/images/passenger.png",
+      height: 45,
     );
 
     var passengerMarker = Marker(
-        markerId: MarkerId("passenger-marker"),
+      markerId: MarkerId("passenger-marker"),
       position: LatLng(position.latitude, position.longitude),
-      infoWindow: InfoWindow(
-        title: "My local"
-      ),
-      icon: passengerIcon
+      infoWindow: InfoWindow(title: "My local"),
+      icon: passengerIcon,
     );
 
     setState(() {
@@ -79,6 +82,67 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     });
     controller.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
   }
+
+  _callUber() async {
+    setState(() {
+      _loading = true;
+    });
+
+    var destination = _destinationController.text;
+    if (destination.isEmpty) {
+      return;
+    }
+
+    var locationList = await locationFromAddress(destination);
+    var location = locationList.firstOrNull;
+    if (location != null) {
+      var placemarkList = await placemarkFromCoordinates(
+        location.latitude,
+        location.longitude,
+      );
+      var placemark = placemarkList.firstOrNull;
+      if (placemark != null) {
+        var destination = Destination.fromPlacemarkAndLocation(
+          placemark: placemark,
+          location: location,
+        );
+
+        _callUberConfirmationDialog(destination);
+      }
+    }
+
+    setState(() {
+      _loading = false;
+    });
+  }
+
+  _callUberConfirmationDialog(Destination destination) {
+    showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text("Confirm address"),
+            content: Text(destination.toString()),
+            contentPadding: EdgeInsets.all(16),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text("Cancel", style: TextStyle(color: Colors.red))
+              ),
+              TextButton(
+                  onPressed: () {
+                    _saveRide();
+                    Navigator.pop(context);
+                  },
+                  child: Text("Confirm", style: TextStyle(color: Colors.green))
+              ),
+            ],
+          );
+        }
+    );
+  }
+
+  _saveRide(){}
 
   @override
   void initState() {
@@ -147,12 +211,12 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
                   color: Colors.white,
                 ),
                 child: TextField(
-                  controller: null,
+                  controller: _destinationController,
                   keyboardType: TextInputType.streetAddress,
                   decoration: InputDecoration(
                     icon: Container(
                       margin: EdgeInsets.only(left: 20),
-                      child: Icon(Icons.local_taxi, color: Colors.black,),
+                      child: _loading ? CircularProgressIndicator() : Icon(Icons.local_taxi, color: Colors.black),
                     ),
                     contentPadding: EdgeInsets.only(left: 15),
                     hintText: "Destination",
@@ -163,20 +227,20 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
             ),
           ),
           Positioned(
-              bottom: MediaQuery.of(context).viewInsets.bottom == 0 ? 25 : 0,
-              left: 0,
-              right: 0,
-              child: Padding(
-                  padding: EdgeInsets.all(10),
-                  child: ElevatedButton(
-                    onPressed: (){},
-                    child: Text(
-                      "Call an uber",
-                      style: TextStyle(color: Colors.white, fontSize: 20),
-                    ),
-                  ),
-              )
-          )
+            bottom: MediaQuery.of(context).viewInsets.bottom == 0 ? 25 : 0,
+            left: 0,
+            right: 0,
+            child: Padding(
+              padding: EdgeInsets.all(10),
+              child: ElevatedButton(
+                onPressed: _callUber,
+                child: Text(
+                  "Call an uber",
+                  style: TextStyle(color: Colors.white, fontSize: 20),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
