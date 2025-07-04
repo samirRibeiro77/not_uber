@@ -27,6 +27,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
 
   var _cameraPosition = CameraPosition(target: LatLng(0, 0));
   final Set<Marker> _markers = {};
+  var _lastRequestId = "";
 
   // Control screen widgets
   var _loading = false;
@@ -57,11 +58,13 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
         .doc(currentUser.ref?.id)
         .snapshots()
         .listen((snapshot) {
-
           if (snapshot.data() != null) {
-            var request = UberActiveRequest.fromFirebase(map: snapshot.data());
+            var activeRequest = UberActiveRequest.fromFirebase(
+              map: snapshot.data(),
+            );
+            _lastRequestId = activeRequest.request.id;
 
-            switch (request.status) {
+            switch (activeRequest.status) {
               case UberRequestStatus.waiting:
                 _widgetsWaitingUber();
                 break;
@@ -71,11 +74,10 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
               case UberRequestStatus.onTheWay:
               case UberRequestStatus.onTrip:
               case UberRequestStatus.done:
-
                 break;
             }
           }
-    });
+        });
   }
 
   // Map Functions
@@ -221,7 +223,21 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     _widgetsWaitingUber();
   }
 
-  _cancelUber() {}
+  _cancelUber() async {
+    var currentUser = await UberUser.current();
+    _db
+        .collection(FirebaseHelper.collections.request)
+        .doc(_lastRequestId)
+        .update({"status": UberRequestStatus.canceled.value})
+        .then((_) {
+          _db
+              .collection(FirebaseHelper.collections.activeRequest)
+              .doc(currentUser.ref?.id)
+              .delete();
+
+          _widgetsDefaultValue();
+        });
+  }
 
   @override
   void initState() {
