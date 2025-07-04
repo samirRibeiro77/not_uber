@@ -7,6 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:not_uber/src/helper/firebase_helper.dart';
 import 'package:not_uber/src/helper/location_helper.dart';
 import 'package:not_uber/src/model/destination.dart';
+import 'package:not_uber/src/model/uber_active_request.dart';
 import 'package:not_uber/src/model/uber_request.dart';
 import 'package:not_uber/src/model/uber_user.dart';
 import 'package:not_uber/src/ui/home_page/home_appbar.dart';
@@ -32,23 +33,48 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   var _showAddressField = true;
   var _bottomButtonText = "Call an Uber";
   var _bottomButtonColor = Color(0xff1ebbd8);
-  late Function _bottomButtonFunction;
 
   _widgetsDefaultValue() {
-    _showAddressField = true;
-    _changeBottomButton("Call an Uber", Color(0xff1ebbd8), _callUber());
+    setState(() {
+      _showAddressField = true;
+      _bottomButtonText = "Call an Uber";
+      _bottomButtonColor = Color(0xff1ebbd8);
+    });
   }
 
   _widgetsWaitingUber() {
-    _showAddressField = false;
-    _changeBottomButton("Cancel", Colors.red, _cancelRequest());
+    setState(() {
+      _showAddressField = false;
+      _bottomButtonText = "Cancel";
+      _bottomButtonColor = Colors.red;
+    });
   }
 
-  _changeBottomButton(String text, Color color, Function function) {
-    setState(() {
-      _bottomButtonText = text;
-      _bottomButtonColor = color;
-      _bottomButtonFunction = function;
+  _createRequestListener() async {
+    var currentUser = await UberUser.current();
+    _db
+        .collection(FirebaseHelper.collections.activeRequest)
+        .doc(currentUser.ref?.id)
+        .snapshots()
+        .listen((snapshot) {
+
+          if (snapshot.data() != null) {
+            var request = UberActiveRequest.fromFirebase(map: snapshot.data());
+
+            switch (request.status) {
+              case UberRequestStatus.waiting:
+                _widgetsWaitingUber();
+                break;
+              case UberRequestStatus.canceled:
+                _cancelUber();
+                break;
+              case UberRequestStatus.onTheWay:
+              case UberRequestStatus.onTrip:
+              case UberRequestStatus.done:
+
+                break;
+            }
+          }
     });
   }
 
@@ -183,19 +209,28 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
 
     _db
         .collection(FirebaseHelper.collections.request)
-        .add(driverRequest.toJson());
+        .doc(driverRequest.id)
+        .set(driverRequest.toJson());
+
+    var activeRequest = UberActiveRequest.fromRequest(driverRequest);
+    _db
+        .collection(FirebaseHelper.collections.activeRequest)
+        .doc(driverRequest.passenger.id)
+        .set(activeRequest.toJson());
 
     _widgetsWaitingUber();
   }
 
-  _cancelRequest() {}
+  _cancelUber() {}
 
   @override
   void initState() {
     super.initState();
     _getUserLocation();
     _createLocationListener();
+
     _widgetsDefaultValue();
+    _createRequestListener();
   }
 
   @override
@@ -289,7 +324,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
             child: Padding(
               padding: EdgeInsets.all(10),
               child: ElevatedButton(
-                onPressed: _callUber,
+                onPressed: _showAddressField ? _callUber : _cancelUber,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _bottomButtonColor,
                 ),

@@ -9,4 +9,6 @@ class FirebaseHelpersCollections {
   String get user => "Uber-User";
 
   String get request => "Uber-Request";
+
+  String get activeRequest => "Uber-Active-Request";
 }
