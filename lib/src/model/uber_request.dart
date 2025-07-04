@@ -6,9 +6,7 @@ class UberRequest {
   late Destination _destination;
   late DocumentReference _passenger;
   late DocumentReference? _driver;
-
-  // Posible values: waiting, onGoing, done
-  late String _status;
+  late UberRequestStatus _status;
 
   UberRequest({
     String id = "",
@@ -20,27 +18,44 @@ class UberRequest {
     _destination = destination;
     _passenger = passenger;
     _driver = driver;
-    _status = "waiting";
+    _status = UberRequestStatus.waiting;
   }
 
-  waitingDriver() {
-    _status = "waiting";
+  driverOnTheWay() {
+    _status = UberRequestStatus.onTheWay;
   }
 
-  traveling() {
-    _status = "onGoing";
+  startTrip() {
+    _status = UberRequestStatus.trip;
   }
 
-  done() {
-    _status = "done";
+  finishTrip() {
+    _status = UberRequestStatus.done;
+  }
+
+  cancelTrip() {
+    _status = UberRequestStatus.done;
   }
 
   Map<String, dynamic> toJson() {
     return {
-      "status": _status,
+      "status": _status.value,
       "destination": _destination.toJson(),
       "passenger": _passenger,
       "driver": _driver,
     };
   }
+
+  String get status => _status.value;
+}
+
+enum UberRequestStatus {
+  waiting("Waiting driver"),
+  onTheWay("Driver is on your way"),
+  trip("On the trip"),
+  done("Finished"),
+  canceled("Canceled");
+
+  final String value;
+  const UberRequestStatus(this.value);
 }

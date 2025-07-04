@@ -26,8 +26,33 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
 
   var _cameraPosition = CameraPosition(target: LatLng(0, 0));
   final Set<Marker> _markers = {};
-  var _loading = false;
 
+  // Control screen widgets
+  var _loading = false;
+  var _showAddressField = true;
+  var _bottomButtonText = "Call an Uber";
+  var _bottomButtonColor = Color(0xff1ebbd8);
+  late Function _bottomButtonFunction;
+
+  _widgetsDefaultValue() {
+    _showAddressField = true;
+    _changeBottomButton("Call an Uber", Color(0xff1ebbd8), _callUber());
+  }
+
+  _widgetsWaitingUber() {
+    _showAddressField = false;
+    _changeBottomButton("Cancel", Colors.red, _cancelRequest());
+  }
+
+  _changeBottomButton(String text, Color color, Function function) {
+    setState(() {
+      _bottomButtonText = text;
+      _bottomButtonColor = color;
+      _bottomButtonFunction = function;
+    });
+  }
+
+  // Map Functions
   _getUserLocation() async {
     var lastPosition = await Geolocator.getLastKnownPosition();
 
@@ -89,6 +114,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     controller.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
   }
 
+  // Request functions
   _callUber() async {
     setState(() {
       _loading = true;
@@ -158,13 +184,18 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     _db
         .collection(FirebaseHelper.collections.request)
         .add(driverRequest.toJson());
+
+    _widgetsWaitingUber();
   }
+
+  _cancelRequest() {}
 
   @override
   void initState() {
     super.initState();
     _getUserLocation();
     _createLocationListener();
+    _widgetsDefaultValue();
   }
 
   @override
@@ -182,66 +213,73 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
               _mapController.complete(controller);
             },
           ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Padding(
-              padding: EdgeInsets.all(10),
-              child: Container(
-                height: 50,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(3),
-                  color: Colors.white,
-                ),
-                child: TextField(
-                  readOnly: true,
-                  keyboardType: TextInputType.streetAddress,
-                  decoration: InputDecoration(
-                    icon: Container(
-                      margin: EdgeInsets.only(left: 20),
-                      child: Icon(Icons.location_on, color: Colors.green),
+          Visibility(
+            visible: _showAddressField,
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Container(
+                      height: 50,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(3),
+                        color: Colors.white,
+                      ),
+                      child: TextField(
+                        readOnly: true,
+                        keyboardType: TextInputType.streetAddress,
+                        decoration: InputDecoration(
+                          icon: Container(
+                            margin: EdgeInsets.only(left: 20),
+                            child: Icon(Icons.location_on, color: Colors.green),
+                          ),
+                          contentPadding: EdgeInsets.only(left: 15),
+                          hintText: "My location",
+                          border: InputBorder.none,
+                        ),
+                      ),
                     ),
-                    contentPadding: EdgeInsets.only(left: 15),
-                    hintText: "My location",
-                    border: InputBorder.none,
                   ),
                 ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 55,
-            left: 0,
-            right: 0,
-            child: Padding(
-              padding: EdgeInsets.all(10),
-              child: Container(
-                height: 50,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(3),
-                  color: Colors.white,
-                ),
-                child: TextField(
-                  controller: _destinationController,
-                  keyboardType: TextInputType.streetAddress,
-                  decoration: InputDecoration(
-                    icon: Container(
-                      margin: EdgeInsets.only(left: 20),
-                      child: _loading
-                          ? CircularProgressIndicator()
-                          : Icon(Icons.local_taxi, color: Colors.black),
+                Positioned(
+                  top: 55,
+                  left: 0,
+                  right: 0,
+                  child: Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Container(
+                      height: 50,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(3),
+                        color: Colors.white,
+                      ),
+                      child: TextField(
+                        controller: _destinationController,
+                        keyboardType: TextInputType.streetAddress,
+                        decoration: InputDecoration(
+                          icon: Container(
+                            margin: EdgeInsets.only(left: 20),
+                            child: _loading
+                                ? CircularProgressIndicator()
+                                : Icon(Icons.local_taxi, color: Colors.black),
+                          ),
+                          contentPadding: EdgeInsets.only(left: 15),
+                          hintText: "Destination",
+                          border: InputBorder.none,
+                        ),
+                      ),
                     ),
-                    contentPadding: EdgeInsets.only(left: 15),
-                    hintText: "Destination",
-                    border: InputBorder.none,
                   ),
                 ),
-              ),
+              ],
             ),
           ),
           Positioned(
@@ -252,8 +290,11 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
               padding: EdgeInsets.all(10),
               child: ElevatedButton(
                 onPressed: _callUber,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _bottomButtonColor,
+                ),
                 child: Text(
-                  "Call an uber",
+                  _bottomButtonText,
                   style: TextStyle(color: Colors.white, fontSize: 20),
                 ),
               ),
