@@ -69,7 +69,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     _db
         .collection(FirebaseHelper.collections.user)
         .doc(firebaseUser.uid)
-        .set(uberUser.toMap());
+        .set(uberUser.toJson());
 
     _goToHome(uberUser.isDriver);
   }

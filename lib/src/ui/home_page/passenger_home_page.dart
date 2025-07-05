@@ -206,7 +206,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     var passenger = await UberUser.current();
     var driverRequest = UberRequest(
       destination: destination,
-      passenger: passenger.ref!,
+      passenger: passenger,
     );
 
     _db
@@ -217,7 +217,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     var activeRequest = UberActiveRequest.fromRequest(driverRequest);
     _db
         .collection(FirebaseHelper.collections.activeRequest)
-        .doc(driverRequest.passenger.id)
+        .doc(passenger.ref?.id)
         .set(activeRequest.toJson());
 
     _widgetsWaitingUber();

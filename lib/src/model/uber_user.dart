@@ -18,14 +18,14 @@ class UberUser {
     _password = password;
   }
 
-  UberUser.fromFirebase({this.ref, Map<String, dynamic>? map}) {
-    if (map == null) {
+  UberUser.fromFirebase({this.ref, Map<String, dynamic>? map, DocumentSnapshot? snapshot}) {
+    if (map == null && snapshot == null) {
       throw Exception("UberUser needs to be initialized correctly");
     }
 
-    name = map["name"] ?? "";
-    email = map["email"] ?? "";
-    isDriver = map["isDriver"] ?? false;
+    name = map?["name"] ?? snapshot?["name"];
+    email = map?["email"] ?? snapshot?["email"];
+    isDriver = map?["isDriver"] ?? snapshot?["isDriver"] ?? false;
   }
 
   static Future<UberUser> current() async {
@@ -60,7 +60,7 @@ class UberUser {
       ? ""
       : "Password must have at least 6 characters";
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {"name": name, "email": email, "isDriver": isDriver};
   }
 

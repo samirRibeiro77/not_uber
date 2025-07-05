@@ -25,16 +25,36 @@ class Destination {
     _latLng = GeoPoint(location.latitude, location.longitude);
   }
 
+  Destination.fromFirebase({Map<String, dynamic>? map}) {
+    if (map == null) {
+      throw Exception("UberRequest needs to be initialized correctly");
+    }
+
+    _street = map["street"];
+    _number = map["number"];
+    _neighborhood = map["neighborhood"];
+    _city = map["city"];
+    _state = map["state"];
+    _countryCode = map["countryCode"];
+    _postalCode = map["postalCode"];
+    _latLng = map["latLng"];
+  }
+
   Map<String, dynamic> toJson() {
     return {
       "street": _street,
       "number": _number,
       "neighborhood": _neighborhood,
       "city": _city,
+      "state": _state,
       "countryCode": _countryCode,
       "postalCode": _postalCode,
       "latLng": _latLng,
     };
+  }
+
+  String toShortString() {
+    return "$_street, $_number, $_neighborhood";
   }
 
   @override
