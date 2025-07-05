@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:not_uber/src/helper/firebase_helper.dart';
+import 'package:not_uber/src/helper/route_generator.dart';
 import 'package:not_uber/src/model/uber_request.dart';
 import 'package:not_uber/src/ui/home_page/home_appbar.dart';
 
@@ -70,6 +71,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
                   var request = UberRequest.fromFirebase(snapshot: requestList[index]);
 
                   return ListTile(
+                    onTap: () => Navigator.pushNamed(context, RouteGenerator.onTrip, arguments: request.id),
                     title: Text(request.passenger.name),
                     subtitle: Text("Destination: ${request.destination.toShortString()}"),
                   );

@@ -85,7 +85,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     var lastPosition = await Geolocator.getLastKnownPosition();
 
     if (lastPosition != null) {
-      _showUserMarker(lastPosition);
+      _showPassengerMarker(lastPosition);
       _moveCamera(
         CameraPosition(
           target: LatLng(lastPosition.latitude, lastPosition.longitude),
@@ -104,7 +104,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     );
 
     Geolocator.getPositionStream(locationSettings: settings).listen((position) {
-      _showUserMarker(position);
+      _showPassengerMarker(position);
       _moveCamera(
         CameraPosition(
           target: LatLng(position.latitude, position.longitude),
@@ -114,7 +114,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     });
   }
 
-  _showUserMarker(Position position) async {
+  _showPassengerMarker(Position position) async {
     var ratio = MediaQuery.of(context).devicePixelRatio;
     var passengerIcon = await BitmapDescriptor.asset(
       ImageConfiguration(devicePixelRatio: ratio),

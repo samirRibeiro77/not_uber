@@ -28,6 +28,7 @@ class UberRequest {
       throw Exception("UberRequest needs to be initialized correctly");
     }
 
+    _reference = snapshot.reference;
     _destination = Destination.fromFirebase(map: snapshot["destination"]);
     _passenger = UberUser.fromFirebase(map: snapshot["passenger"]);
     _driver = snapshot["driver"] != null ? UberUser.fromFirebase(map: snapshot["driver"]) : null;
