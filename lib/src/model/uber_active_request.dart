@@ -1,15 +1,23 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:not_uber/src/model/uber_request.dart';
 
 class UberActiveRequest {
-  late DocumentReference _request;
+  late String _requestId;
   late UberRequestStatus _status;
+  late String _passengerId;
+  late String? _driverId;
 
-  UberActiveRequest(this._request, this._status);
+  UberActiveRequest(
+    this._requestId,
+    this._status,
+    this._passengerId,
+    this._driverId,
+  );
 
   UberActiveRequest.fromRequest(UberRequest request) {
-    _request = request.reference;
+    _requestId = request.id;
     _status = request.status;
+    _passengerId = request.passenger.id;
+    _driverId = request.driver?.id;
   }
 
   UberActiveRequest.fromFirebase({Map<String, dynamic>? map}) {
@@ -17,18 +25,26 @@ class UberActiveRequest {
       throw Exception("UberActiveRequest needs to be initialized correctly");
     }
 
-    _request = map["request"];
+    _requestId = map["requestId"];
     _status = UberRequestStatus.getByString(map["status"]);
-}
-
-  UberRequestStatus get status => _status;
-
-  DocumentReference get request => _request;
+    _passengerId = map["passengerId"];
+    _driverId = map["driverId"];
+  }
 
   Map<String, dynamic> toJson() {
     return {
-      "request": _request,
+      "requestId": _requestId,
       "status": _status.value,
+      "passengerId": _passengerId,
+      "driverId": _driverId,
     };
   }
+
+  String get requestId => _requestId;
+
+  UberRequestStatus get status => _status;
+
+  String get passengerId => _passengerId;
+
+  String get driverId => _driverId ?? "";
 }

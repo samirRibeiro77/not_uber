@@ -55,14 +55,14 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     var currentUser = await UberUser.current();
     _db
         .collection(FirebaseHelper.collections.activeRequest)
-        .doc(currentUser.ref?.id)
+        .doc(currentUser.id)
         .snapshots()
         .listen((snapshot) {
           if (snapshot.data() != null) {
             var activeRequest = UberActiveRequest.fromFirebase(
               map: snapshot.data(),
             );
-            _lastRequestId = activeRequest.request.id;
+            _lastRequestId = activeRequest.requestId;
 
             switch (activeRequest.status) {
               case UberRequestStatus.waiting:
@@ -182,7 +182,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
       builder: (context) {
         return AlertDialog(
           title: Text("Confirm address"),
-          content: Text(destination.toString()),
+          content: Text(destination.toLongString()),
           contentPadding: EdgeInsets.all(16),
           actions: [
             TextButton(
@@ -217,7 +217,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     var activeRequest = UberActiveRequest.fromRequest(driverRequest);
     _db
         .collection(FirebaseHelper.collections.activeRequest)
-        .doc(passenger.ref?.id)
+        .doc(passenger.id)
         .set(activeRequest.toJson());
 
     _widgetsWaitingUber();
@@ -232,7 +232,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
         .then((_) {
           _db
               .collection(FirebaseHelper.collections.activeRequest)
-              .doc(currentUser.ref?.id)
+              .doc(currentUser.id)
               .delete();
 
           _widgetsDefaultValue();

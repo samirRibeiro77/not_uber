@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:not_uber/src/model/uber_request.dart';
 import 'package:not_uber/src/splashscreen.dart';
 import 'package:not_uber/src/ui/home_page/driver_home_page.dart';
 import 'package:not_uber/src/ui/login_page.dart';
@@ -17,7 +18,7 @@ class RouteGenerator {
   static Route<dynamic> generateRoutes(RouteSettings routeSettings) {
     switch (routeSettings.name) {
       case initial:
-        return MaterialPageRoute(builder: (_) => Splashscreen());
+        return MaterialPageRoute(builder: (_) => SplashScreen());
       case login:
         return MaterialPageRoute(builder: (_) => LoginPage());
       case register:
@@ -29,7 +30,7 @@ class RouteGenerator {
       case onTrip:
         return MaterialPageRoute(
           builder: (_) =>
-              RidePage(requestId: routeSettings.arguments as String),
+              RidePage(request: routeSettings.arguments as UberRequest),
         );
       default:
         return _errorRoute();

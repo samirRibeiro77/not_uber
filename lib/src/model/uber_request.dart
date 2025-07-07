@@ -4,7 +4,7 @@ import 'package:not_uber/src/model/destination.dart';
 import 'package:not_uber/src/model/uber_user.dart';
 
 class UberRequest {
-  late DocumentReference _reference;
+  late String _id;
   late Destination _destination;
   late UberUser _passenger;
   late UberUser? _driver;
@@ -15,28 +15,40 @@ class UberRequest {
     required UberUser passenger,
     UberUser? driver,
   }) {
-    _reference = FirebaseFirestore.instance.collection(FirebaseHelper.collections.request).doc();
+    _id = FirebaseFirestore.instance
+        .collection(FirebaseHelper.collections.request)
+        .doc()
+        .id;
     _destination = destination;
     _passenger = passenger;
     _driver = driver;
     _status = UberRequestStatus.waiting;
   }
 
-
-  UberRequest.fromFirebase({QueryDocumentSnapshot? snapshot}) {
-    if (snapshot == null) {
+  UberRequest.fromFirebase({
+    Map<String, dynamic>? map,
+    QueryDocumentSnapshot? snapshot,
+  }) {
+    if (snapshot != null) {
+      _id = snapshot["id"] ?? snapshot.id;
+      _destination = Destination.fromFirebase(map: snapshot["destination"]);
+      _passenger = UberUser.fromFirebase(map: snapshot["passenger"]);
+      _driver = UberUser.fromFirebaseOrNull(map: snapshot["driver"]);
+      _status = UberRequestStatus.getByString(snapshot["status"]);
+    } else if (map != null) {
+      _id = map["id"];
+      _destination = Destination.fromFirebase(map: map["destination"]);
+      _passenger = UberUser.fromFirebase(map: map["passenger"]);
+      _driver = UberUser.fromFirebaseOrNull(map: map["driver"]);
+      _status = UberRequestStatus.getByString(map["status"]);
+    } else {
       throw Exception("UberRequest needs to be initialized correctly");
     }
-
-    _reference = snapshot.reference;
-    _destination = Destination.fromFirebase(map: snapshot["destination"]);
-    _passenger = UberUser.fromFirebase(map: snapshot["passenger"]);
-    _driver = snapshot["driver"] != null ? UberUser.fromFirebase(map: snapshot["driver"]) : null;
-    _status = UberRequestStatus.getByString(snapshot["status"]);
   }
 
-  driverOnTheWay() {
+  driverAcceptRequest(UberUser driver) {
     _status = UberRequestStatus.onTheWay;
+    _driver = driver;
   }
 
   startTrip() {
@@ -53,6 +65,7 @@ class UberRequest {
 
   Map<String, dynamic> toJson() {
     return {
+      "id": _id,
       "status": _status.value,
       "destination": _destination.toJson(),
       "passenger": _passenger.toJson(),
@@ -66,9 +79,7 @@ class UberRequest {
 
   Destination get destination => _destination;
 
-  String get id => _reference.id;
-
-  DocumentReference get reference => _reference;
+  String get id => _id;
 
   UberUser? get driver => _driver;
 }
@@ -81,6 +92,7 @@ enum UberRequestStatus {
   canceled("canceled");
 
   final String value;
+
   const UberRequestStatus(this.value);
 
   static UberRequestStatus getByString(String text) {

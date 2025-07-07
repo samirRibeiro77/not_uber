@@ -13,7 +13,7 @@ class AppWidget extends StatelessWidget {
       theme: AppThemeData.defaultTheme,
       initialRoute: RouteGenerator.initial,
       onGenerateRoute: RouteGenerator.generateRoutes,
-      home: Splashscreen(),
+      home: SplashScreen(),
     );
   }
 }

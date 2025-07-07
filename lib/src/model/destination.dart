@@ -57,8 +57,7 @@ class Destination {
     return "$_street, $_number, $_neighborhood";
   }
 
-  @override
-  String toString() {
+  String toLongString() {
     return "$_street, $_number, $_neighborhood"
         "\n$_city, $_state - $_countryCode"
         "\n$_postalCode";

@@ -66,6 +66,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   }
 
   _saveUser({required User firebaseUser, required UberUser uberUser}) {
+    uberUser.id = firebaseUser.uid;
     _db
         .collection(FirebaseHelper.collections.user)
         .doc(firebaseUser.uid)

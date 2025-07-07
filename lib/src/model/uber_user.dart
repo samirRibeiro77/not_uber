@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:not_uber/src/helper/firebase_helper.dart';
 
 class UberUser {
-  late DocumentReference? ref;
+  late String id;
   late String name;
   late String email;
   String? _password;
@@ -18,14 +18,27 @@ class UberUser {
     _password = password;
   }
 
-  UberUser.fromFirebase({this.ref, Map<String, dynamic>? map, DocumentSnapshot? snapshot}) {
+  UberUser.fromFirebase({
+    Map<String, dynamic>? map,
+    DocumentSnapshot? snapshot,
+  }) {
     if (map == null && snapshot == null) {
       throw Exception("UberUser needs to be initialized correctly");
     }
 
+    id = map?["id"] ?? snapshot?["id"] ?? snapshot?.id;
     name = map?["name"] ?? snapshot?["name"];
     email = map?["email"] ?? snapshot?["email"];
     isDriver = map?["isDriver"] ?? snapshot?["isDriver"] ?? false;
+  }
+
+  static UberUser? fromFirebaseOrNull({
+    Map<String, dynamic>? map,
+    DocumentSnapshot? snapshot,
+  }) {
+    if (map != null) return UberUser.fromFirebase(map: map);
+    if (snapshot != null) return UberUser.fromFirebase(snapshot: snapshot);
+    return null;
   }
 
   static Future<UberUser> current() async {
@@ -34,8 +47,12 @@ class UberUser {
         .doc(FirebaseAuth.instance.currentUser?.uid)
         .get();
 
-    return UberUser.fromFirebase(map: snapshot.data(), ref: snapshot.reference);
+    return UberUser.fromFirebase(map: snapshot.data());
   }
+
+  String get userType => isDriver ? "Driver" : "Passenger";
+
+  String get password => _password ?? "";
 
   String validateUser({
     bool validateName = true,
@@ -51,6 +68,11 @@ class UberUser {
     return errorMessages.join("\n").trim();
   }
 
+  Map<String, dynamic> toJson() {
+    return {"id": id, "name": name, "email": email, "isDriver": isDriver};
+  }
+
+  // Validade user fields
   String get _validName => name.isNotEmpty ? "" : "Name can't be empty";
 
   String get _validEmail =>
@@ -59,12 +81,4 @@ class UberUser {
   String get _validPassword => _password!.isNotEmpty && _password!.length > 6
       ? ""
       : "Password must have at least 6 characters";
-
-  Map<String, dynamic> toJson() {
-    return {"name": name, "email": email, "isDriver": isDriver};
-  }
-
-  String get userType => isDriver ? "Driver" : "Passenger";
-
-  String get password => _password ?? "";
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -5,28 +7,27 @@ import 'package:not_uber/src/helper/firebase_helper.dart';
 import 'package:not_uber/src/helper/route_generator.dart';
 import 'package:not_uber/src/model/uber_user.dart';
 
-class Splashscreen extends StatelessWidget {
-  Splashscreen({super.key});
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
 
-  final _auth = FirebaseAuth.instance;
-  final _db = FirebaseFirestore.instance;
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
 
-  _redirect(BuildContext context) async {
-    if (_auth.currentUser == null) {
-      Navigator.pushReplacementNamed(context, RouteGenerator.login);
+class _SplashScreenState extends State<SplashScreen> {
+  _redirect() async {
+    if (FirebaseAuth.instance.currentUser == null) {
+      Timer(Duration(seconds: 3), () {
+        Navigator.pushReplacementNamed(context, RouteGenerator.login);
+      });
+    } else {
+      var homePage = await _getHomePageName();
+      Navigator.pushReplacementNamed(context, homePage);
     }
-
-    var homePage = await _getHomePageName(_auth.currentUser!.uid);
-    Navigator.pushReplacementNamed(context, homePage);
   }
 
-  Future<String> _getHomePageName(String uid) async {
-    var snapshot = await _db
-        .collection(FirebaseHelper.collections.user)
-        .doc(uid)
-        .get();
-
-    var user = UberUser.fromFirebase(map: snapshot.data());
+  Future<String> _getHomePageName() async {
+    var user = await UberUser.current();
 
     return user.isDriver
         ? Future.value(RouteGenerator.driverHome)
@@ -34,20 +35,27 @@ class Splashscreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    _redirect(context);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
 
-    return Container(
-      width: MediaQuery.of(context).size.width,
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage("assets/images/background.png"),
-          fit: BoxFit.cover,
+    _redirect();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        width: MediaQuery.of(context).size.width,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage("assets/images/background.png"),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Center(
+          child: CircularProgressIndicator(backgroundColor: Colors.white),
         ),
       ),
-      child: Center(
-        child: CircularProgressIndicator(backgroundColor: Colors.white)
-      )
     );
   }
 }

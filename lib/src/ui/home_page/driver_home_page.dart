@@ -71,7 +71,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
                   var request = UberRequest.fromFirebase(snapshot: requestList[index]);
 
                   return ListTile(
-                    onTap: () => Navigator.pushNamed(context, RouteGenerator.onTrip, arguments: request.id),
+                    onTap: () => Navigator.pushNamed(context, RouteGenerator.onTrip, arguments: request),
                     title: Text(request.passenger.name),
                     subtitle: Text("Destination: ${request.destination.toShortString()}"),
                   );
