@@ -1,9 +1,6 @@
 import 'dart:async';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:not_uber/src/helper/firebase_helper.dart';
 import 'package:not_uber/src/helper/route_generator.dart';
 import 'package:not_uber/src/model/uber_user.dart';
 

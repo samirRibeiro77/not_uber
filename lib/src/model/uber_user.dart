@@ -8,6 +8,7 @@ class UberUser {
   late String email;
   String? _password;
   late bool isDriver;
+  late GeoPoint? position;
 
   UberUser({
     this.name = "",
@@ -30,6 +31,7 @@ class UberUser {
     name = map?["name"] ?? snapshot?["name"];
     email = map?["email"] ?? snapshot?["email"];
     isDriver = map?["isDriver"] ?? snapshot?["isDriver"] ?? false;
+    position = map?["position"] ?? snapshot?["position"];
   }
 
   static UberUser? fromFirebaseOrNull({
@@ -69,7 +71,13 @@ class UberUser {
   }
 
   Map<String, dynamic> toJson() {
-    return {"id": id, "name": name, "email": email, "isDriver": isDriver};
+    return {
+      "id": id,
+      "name": name,
+      "email": email,
+      "isDriver": isDriver,
+      "position": position,
+    };
   }
 
   // Validade user fields

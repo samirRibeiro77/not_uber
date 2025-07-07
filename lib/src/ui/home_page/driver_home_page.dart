@@ -3,7 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:not_uber/src/helper/firebase_helper.dart';
 import 'package:not_uber/src/helper/route_generator.dart';
+import 'package:not_uber/src/model/uber_active_request.dart';
 import 'package:not_uber/src/model/uber_request.dart';
+import 'package:not_uber/src/model/uber_user.dart';
 import 'package:not_uber/src/ui/home_page/home_appbar.dart';
 
 class DriverHomePage extends StatefulWidget {
@@ -37,10 +39,25 @@ class _DriverHomePageState extends State<DriverHomePage> {
         });
   }
 
+  _getCurrentRequest() async {
+    var user = await UberUser.current();
+    var activeRequestSnapshot = await _db.collection(FirebaseHelper.collections.activeRequest).doc(user.id).get();
+
+    if (activeRequestSnapshot.data() == null) {
+      _createRequestListener();
+    }
+    else {
+      var activeRequest = UberActiveRequest.fromFirebase(map: activeRequestSnapshot.data());
+      var requestSnapshot = await _db.collection(FirebaseHelper.collections.request).doc(activeRequest.requestId).get();
+      var request = UberRequest.fromFirebase(map: requestSnapshot.data());
+      Navigator.pushReplacementNamed(context, RouteGenerator.onTrip, arguments: request);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _createRequestListener();
+    _getCurrentRequest();
   }
 
   @override

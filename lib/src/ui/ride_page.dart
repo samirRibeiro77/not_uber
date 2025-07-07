@@ -26,13 +26,12 @@ class _RidePageState extends State<RidePage> {
 
   var _cameraPosition = CameraPosition(target: LatLng(0, 0));
   final Set<Marker> _markers = {};
-
-  UberRequest? _request;
+  var _currentLocation = GeoPoint(0, 0);
 
   // Control screen widgets
-  var _loading = false;
   var _bottomButtonText = "Accept this trip";
   var _bottomButtonColor = Color(0xff1ebbd8);
+  VoidCallback? _bottomButtonFunction;
 
   // Location and maps
   _getUserLocation() async {
@@ -69,6 +68,7 @@ class _RidePageState extends State<RidePage> {
   }
 
   _showDriverMarker(Position position) async {
+    _currentLocation = GeoPoint(position.latitude, position.longitude);
     var ratio = MediaQuery.of(context).devicePixelRatio;
     var passengerIcon = await BitmapDescriptor.asset(
       ImageConfiguration(devicePixelRatio: ratio),
@@ -97,70 +97,68 @@ class _RidePageState extends State<RidePage> {
   }
 
   // Load Data
-  _getRequestData() async {
-    var snapshot = await _db.collection(FirebaseHelper.collections.request).doc(widget.request.id).get();
-    _request = UberRequest.fromFirebase(map: snapshot.data());
-    _createRequestListener();
-  }
-
   _createRequestListener() {
     _db
-        .collection(FirebaseHelper.collections.request).doc(_request?.id)
+        .collection(FirebaseHelper.collections.request)
+        .doc(widget.request.id)
         .snapshots()
         .listen((snapshot) {
-      if (snapshot.data() != null) {
-        var request = UberRequest.fromFirebase(map: snapshot.data());
-        print("Data => ${request.toJson()}");
-        switch (request.status) {
-          case UberRequestStatus.waiting:
-            // _widgetsWaitingUber();
-            break;
-          case UberRequestStatus.canceled:
-            // _cancelUber();
-            break;
-          case UberRequestStatus.onTheWay:
-          case UberRequestStatus.onTrip:
-          case UberRequestStatus.done:
-            break;
-        }
-      }
-    });
+          if (snapshot.data() != null) {
+            var request = UberRequest.fromFirebase(map: snapshot.data());
+            switch (request.status) {
+              case UberRequestStatus.waiting:
+              case UberRequestStatus.canceled:
+                _updateButtonWidget(
+                  message: "Accept ride",
+                  color: Color(0xff1ebbd8),
+                  function: _acceptRequest,
+                );
+                break;
+              case UberRequestStatus.onTheWay:
+              case UberRequestStatus.onTrip:
+                _updateButtonWidget(
+                  message: "Going to the passenger"
+                );
+                break;
+              case UberRequestStatus.done:
+                break;
+            }
+          }
+        });
   }
 
   // Request functions
-  _acceptRequest() {
-    _confirmRequest(_request!);
-  }
-
-  _confirmRequest(UberRequest request) async {
+  _acceptRequest() async {
     var driver = await UberUser.current();
+    driver.position = _currentLocation;
 
-    request.driverAcceptRequest(driver);
-    print("Request => ${request.toJson()}");
+    widget.request.driverAcceptRequest(driver);
 
     _db
         .collection(FirebaseHelper.collections.request)
-        .doc(request.id)
-        .update(request.toJson());
+        .doc(widget.request.id)
+        .update(widget.request.toJson());
 
-    var activeRequest = UberActiveRequest.fromRequest(request);
-    print("Active Request => ${activeRequest.toJson()}");
+    var activeRequest = UberActiveRequest.fromRequest(widget.request);
     _db
         .collection(FirebaseHelper.collections.activeRequest)
-        .doc(request.passenger.id)
-        .set(activeRequest.toJson());
+        .doc(widget.request.passenger.id)
+        .update(activeRequest.toJson());
     _db
         .collection(FirebaseHelper.collections.activeRequest)
         .doc(driver.id)
         .set(activeRequest.toJson());
-
-    _widgetsWaitingUber();
   }
 
-  _widgetsWaitingUber() {
+  _updateButtonWidget({
+    required String message,
+    Color color = Colors.transparent,
+    VoidCallback? function,
+  }) {
     setState(() {
-      _bottomButtonText = "Cancel";
-      _bottomButtonColor = Colors.red;
+      _bottomButtonText = message;
+      _bottomButtonColor = color;
+      _bottomButtonFunction = function;
     });
   }
 
@@ -170,8 +168,9 @@ class _RidePageState extends State<RidePage> {
 
     _getUserLocation();
     _createLocationListener();
-    _getRequestData();
+    _createRequestListener();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -194,7 +193,7 @@ class _RidePageState extends State<RidePage> {
             child: Padding(
               padding: EdgeInsets.all(10),
               child: ElevatedButton(
-                onPressed: _acceptRequest,
+                onPressed: _bottomButtonFunction,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _bottomButtonColor,
                 ),
