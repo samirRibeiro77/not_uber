@@ -34,20 +34,19 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   var _showAddressField = true;
   var _bottomButtonText = "Call an Uber";
   var _bottomButtonColor = Color(0xff1ebbd8);
+  VoidCallback? _bottomButtonFunction;
 
-  _widgetsDefaultValue() {
+  _updateButtonWidget({
+    required String message,
+    required bool showAddress,
+    Color color = Colors.transparent,
+    VoidCallback? function,
+  }) {
     setState(() {
-      _showAddressField = true;
-      _bottomButtonText = "Call an Uber";
-      _bottomButtonColor = Color(0xff1ebbd8);
-    });
-  }
-
-  _widgetsWaitingUber() {
-    setState(() {
-      _showAddressField = false;
-      _bottomButtonText = "Cancel";
-      _bottomButtonColor = Colors.red;
+      _showAddressField = showAddress;
+      _bottomButtonText = message;
+      _bottomButtonColor = color;
+      _bottomButtonFunction = function;
     });
   }
 
@@ -66,12 +65,19 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
 
             switch (activeRequest.status) {
               case UberRequestStatus.waiting:
-                _widgetsWaitingUber();
-                break;
-              case UberRequestStatus.canceled:
-                _cancelUber();
+                _updateButtonWidget(
+                  message: "Cancel",
+                  showAddress: false,
+                  color: Colors.red,
+                  function: _cancelUber,
+                );
                 break;
               case UberRequestStatus.onTheWay:
+                _updateButtonWidget(
+                  message: "Uber on your way",
+                  showAddress: false,
+                );
+              case UberRequestStatus.canceled:
               case UberRequestStatus.onTrip:
               case UberRequestStatus.done:
                 break;
@@ -204,6 +210,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
 
   _requestRide(Destination destination) async {
     var passenger = await UberUser.current();
+
     var driverRequest = UberRequest(
       destination: destination,
       passenger: passenger,
@@ -220,7 +227,12 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
         .doc(passenger.id)
         .set(activeRequest.toJson());
 
-    _widgetsWaitingUber();
+    _updateButtonWidget(
+      message: "Cancel",
+      showAddress: false,
+      color: Colors.red,
+      function: _cancelUber,
+    );
   }
 
   _cancelUber() async {
@@ -235,7 +247,12 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
               .doc(currentUser.id)
               .delete();
 
-          _widgetsDefaultValue();
+          _updateButtonWidget(
+            message: "Call an Uber",
+            showAddress: true,
+            color: Color(0xff1ebbd8),
+            function: _callUber,
+          );
         });
   }
 
@@ -245,7 +262,12 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     _getUserLocation();
     _createLocationListener();
 
-    _widgetsDefaultValue();
+    _updateButtonWidget(
+      message: "Call an Uber",
+      showAddress: true,
+      color: Color(0xff1ebbd8),
+      function: _callUber,
+    );
     _createRequestListener();
   }
 
@@ -340,7 +362,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
             child: Padding(
               padding: EdgeInsets.all(10),
               child: ElevatedButton(
-                onPressed: _showAddressField ? _callUber : _cancelUber,
+                onPressed: _bottomButtonFunction,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _bottomButtonColor,
                 ),
