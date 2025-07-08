@@ -88,7 +88,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   }
 
   // Map Functions
-  _getUserLocation() async {
+  _getPassengerLocation() async {
     var lastPosition = await Geolocator.getLastKnownPosition();
 
     if (lastPosition != null) {
@@ -102,7 +102,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     }
   }
 
-  _createLocationListener() async {
+  _createPassengerLocationListener() async {
     await LocationHelper.isLocationEnabled();
 
     var settings = LocationSettings(
@@ -262,8 +262,8 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   @override
   void initState() {
     super.initState();
-    _getUserLocation();
-    _createLocationListener();
+    _getPassengerLocation();
+    _createPassengerLocationListener();
 
     _updateButtonWidget(
       message: "Call an Uber",

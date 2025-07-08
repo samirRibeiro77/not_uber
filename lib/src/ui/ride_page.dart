@@ -25,7 +25,7 @@ class _RidePageState extends State<RidePage> {
   final _mapController = Completer<GoogleMapController>();
 
   var _cameraPosition = CameraPosition(target: LatLng(0, 0));
-  final Set<Marker> _markers = {};
+  Set<Marker> _markers = {};
   var _currentLocation = GeoPoint(0, 0);
 
   // Control screen widgets
@@ -34,7 +34,7 @@ class _RidePageState extends State<RidePage> {
   VoidCallback? _bottomButtonFunction;
 
   // Location and maps
-  _getUserLocation() async {
+  _getDriverLocation() async {
     var lastPosition = await Geolocator.getLastKnownPosition();
 
     if (lastPosition != null) {
@@ -48,7 +48,7 @@ class _RidePageState extends State<RidePage> {
     }
   }
 
-  _createLocationListener() async {
+  _createDriverLocationListener() async {
     await LocationHelper.isLocationEnabled();
 
     var settings = LocationSettings(
@@ -70,21 +70,21 @@ class _RidePageState extends State<RidePage> {
   _showDriverMarker(Position position) async {
     _currentLocation = GeoPoint(position.latitude, position.longitude);
     var ratio = MediaQuery.of(context).devicePixelRatio;
-    var passengerIcon = await BitmapDescriptor.asset(
+    var driverIcon = await BitmapDescriptor.asset(
       ImageConfiguration(devicePixelRatio: ratio),
       "assets/images/driver.png",
       height: 45,
     );
 
-    var passengerMarker = Marker(
+    var driverMarker = Marker(
       markerId: MarkerId("driver-marker"),
       position: LatLng(position.latitude, position.longitude),
       infoWindow: InfoWindow(title: "My local"),
-      icon: passengerIcon,
+      icon: driverIcon,
     );
 
     setState(() {
-      _markers.add(passengerMarker);
+      _markers.add(driverMarker);
     });
   }
 
@@ -148,8 +148,62 @@ class _RidePageState extends State<RidePage> {
         .collection(FirebaseHelper.collections.activeRequest)
         .doc(driver.id)
         .set(activeRequest.toJson());
+
+    _showPassengerLocation();
   }
 
+  _showPassengerLocation() {
+    _showBothMarkers(widget.request.driver!.position!, widget.request.passenger.position!);
+  }
+
+  _showBothMarkers(GeoPoint driver, GeoPoint passenger) async {
+    Set<Marker> markerList = {};
+    var ratio = MediaQuery.of(context).devicePixelRatio;
+
+    var passengerIcon = await BitmapDescriptor.asset(
+      ImageConfiguration(devicePixelRatio: ratio),
+      "assets/images/passenger.png",
+      height: 45,
+    );
+
+    var passengerMarker = Marker(
+      markerId: MarkerId("passenger-marker"),
+      position: LatLng(passenger.latitude, passenger.longitude),
+      infoWindow: InfoWindow(title: "My local"),
+      icon: passengerIcon,
+    );
+
+    var driverIcon = await BitmapDescriptor.asset(
+      ImageConfiguration(devicePixelRatio: ratio),
+      "assets/images/driver.png",
+      height: 45,
+    );
+
+    var driverMarker = Marker(
+      markerId: MarkerId("driver-marker"),
+      position: LatLng(driver.latitude, driver.longitude),
+      infoWindow: InfoWindow(title: "My local"),
+      icon: driverIcon,
+    );
+
+    markerList.add(passengerMarker);
+    markerList.add(driverMarker);
+
+    setState(() {
+      _markers = markerList;
+    });
+
+    var midLat = (driver.latitude + passenger.latitude)/2;
+    var midLng = (driver.longitude + passenger.longitude)/2;
+    _moveCamera(
+      CameraPosition(
+        target: LatLng(midLat, midLng),
+        zoom: 15,
+      ),
+    );
+  }
+
+  // Bottom Button
   _updateButtonWidget({
     required String message,
     Color color = Colors.transparent,
@@ -166,8 +220,8 @@ class _RidePageState extends State<RidePage> {
   void initState() {
     super.initState();
 
-    _getUserLocation();
-    _createLocationListener();
+    _getDriverLocation();
+    _createDriverLocationListener();
     _createRequestListener();
   }
 
