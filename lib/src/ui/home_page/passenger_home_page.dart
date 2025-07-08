@@ -37,54 +37,44 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   var _bottomButtonColor = Color(0xff1ebbd8);
   VoidCallback? _bottomButtonFunction;
 
-  _updateButtonWidget({
-    required String message,
-    required bool showAddress,
-    Color color = Colors.transparent,
-    VoidCallback? function,
-  }) {
-    setState(() {
-      _showAddressField = showAddress;
-      _bottomButtonText = message;
-      _bottomButtonColor = color;
-      _bottomButtonFunction = function;
-    });
+  _createActiveRequestListener() async {
+    var currentUser = await UberUser.current();
+    var snapshot = await _db
+        .collection(FirebaseHelper.collections.activeRequest)
+        .doc(currentUser.id).get();
+
+    if (snapshot.data() != null) {
+      var activeRequest = UberActiveRequest.fromFirebase(map: snapshot.data());
+      _lastRequestId = activeRequest.requestId;
+      _createRequestListener(_lastRequestId);
+    }
+    else {
+      _statusEmptyTrip();
+    }
   }
 
-  _createRequestListener() async {
-    var currentUser = await UberUser.current();
+  _createRequestListener(String requestId) async {
     _db
-        .collection(FirebaseHelper.collections.activeRequest)
-        .doc(currentUser.id)
+        .collection(FirebaseHelper.collections.request)
+        .doc(requestId)
         .snapshots()
         .listen((snapshot) {
-          if (snapshot.data() != null) {
-            var activeRequest = UberActiveRequest.fromFirebase(
-              map: snapshot.data(),
-            );
-            _lastRequestId = activeRequest.requestId;
-
-            switch (activeRequest.status) {
-              case UberRequestStatus.waiting:
-                _updateButtonWidget(
-                  message: "Cancel",
-                  showAddress: false,
-                  color: Colors.red,
-                  function: _cancelUber,
-                );
-                break;
-              case UberRequestStatus.onTheWay:
-                _updateButtonWidget(
-                  message: "Uber on your way",
-                  showAddress: false,
-                );
-              case UberRequestStatus.canceled:
-              case UberRequestStatus.onTrip:
-              case UberRequestStatus.done:
-                break;
-            }
-          }
-        });
+      if (snapshot.data() != null) {
+        var request = UberRequest.fromFirebase(map: snapshot.data());
+        switch (request.status) {
+          case UberRequestStatus.waiting:
+          case UberRequestStatus.onTheWay:
+            _statusWaiting();
+            break;
+          case UberRequestStatus.onTrip:
+            _statusOnTrip();
+            break;
+          case UberRequestStatus.done:
+          case UberRequestStatus.canceled:
+            break;
+        }
+      }
+    });
   }
 
   // Map Functions
@@ -123,7 +113,9 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
 
   _showPassengerMarker(Position position) async {
     _currentLocation = GeoPoint(position.latitude, position.latitude);
-    var ratio = MediaQuery.of(context).devicePixelRatio;
+    var ratio = MediaQuery
+        .of(context)
+        .devicePixelRatio;
     var passengerIcon = await BitmapDescriptor.asset(
       ImageConfiguration(devicePixelRatio: ratio),
       "assets/images/passenger.png",
@@ -245,18 +237,58 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
         .doc(_lastRequestId)
         .update({"status": UberRequestStatus.canceled.value})
         .then((_) {
-          _db
-              .collection(FirebaseHelper.collections.activeRequest)
-              .doc(currentUser.id)
-              .delete();
+      _db
+          .collection(FirebaseHelper.collections.activeRequest)
+          .doc(currentUser.id)
+          .delete();
 
-          _updateButtonWidget(
-            message: "Call an Uber",
-            showAddress: true,
-            color: Color(0xff1ebbd8),
-            function: _callUber,
-          );
-        });
+      _updateButtonWidget(
+        message: "Call an Uber",
+        showAddress: true,
+        color: Color(0xff1ebbd8),
+        function: _callUber,
+      );
+    });
+  }
+
+  // Widgets
+  _statusEmptyTrip() {
+    _updateButtonWidget(
+      message: "Call an Uber",
+      showAddress: true,
+      color: Color(0xff1ebbd8),
+      function: _callUber,
+    );
+  }
+
+  _statusWaiting() {
+    _updateButtonWidget(
+      message: "Cancel",
+      showAddress: false,
+      color: Colors.red,
+      function: _cancelUber,
+    );
+  }
+
+  _statusOnTrip() {
+    _updateButtonWidget(
+      message: "On a trip",
+      showAddress: false,
+    );
+  }
+
+  _updateButtonWidget({
+    required String message,
+    required bool showAddress,
+    Color color = Colors.transparent,
+    VoidCallback? function,
+  }) {
+    setState(() {
+      _showAddressField = showAddress;
+      _bottomButtonText = message;
+      _bottomButtonColor = color;
+      _bottomButtonFunction = function;
+    });
   }
 
   @override
@@ -265,13 +297,8 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     _getPassengerLocation();
     _createPassengerLocationListener();
 
-    _updateButtonWidget(
-      message: "Call an Uber",
-      showAddress: true,
-      color: Color(0xff1ebbd8),
-      function: _callUber,
-    );
-    _createRequestListener();
+    _statusEmptyTrip();
+    _createActiveRequestListener();
   }
 
   @override
@@ -359,7 +386,10 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
             ),
           ),
           Positioned(
-            bottom: MediaQuery.of(context).viewInsets.bottom == 0 ? 25 : 0,
+            bottom: MediaQuery
+                .of(context)
+                .viewInsets
+                .bottom == 0 ? 25 : 0,
             left: 0,
             right: 0,
             child: Padding(

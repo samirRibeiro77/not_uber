@@ -32,19 +32,15 @@ class _RidePageState extends State<RidePage> {
   var _bottomButtonText = "Accept this trip";
   var _bottomButtonColor = Color(0xff1ebbd8);
   VoidCallback? _bottomButtonFunction;
+  String _appbarStatus = "";
 
   // Location and maps
   _getDriverLocation() async {
     var lastPosition = await Geolocator.getLastKnownPosition();
 
     if (lastPosition != null) {
-      _showDriverMarker(lastPosition);
-      _moveCamera(
-        CameraPosition(
-          target: LatLng(lastPosition.latitude, lastPosition.longitude),
-          zoom: 16,
-        ),
-      );
+      _currentLocation = GeoPoint(lastPosition.latitude, lastPosition.longitude);
+
     }
   }
 
@@ -57,34 +53,28 @@ class _RidePageState extends State<RidePage> {
     );
 
     Geolocator.getPositionStream(locationSettings: settings).listen((position) {
-      _showDriverMarker(position);
-      _moveCamera(
-        CameraPosition(
-          target: LatLng(position.latitude, position.longitude),
-          zoom: 16,
-        ),
-      );
+      _currentLocation = GeoPoint(position.latitude, position.longitude);
+
     });
   }
 
-  _showDriverMarker(Position position) async {
-    _currentLocation = GeoPoint(position.latitude, position.longitude);
+  _showMarker(GeoPoint position, String icon, String infoWindow) async {
     var ratio = MediaQuery.of(context).devicePixelRatio;
-    var driverIcon = await BitmapDescriptor.asset(
+    var bitmapIcon = await BitmapDescriptor.asset(
       ImageConfiguration(devicePixelRatio: ratio),
-      "assets/images/driver.png",
+      icon,
       height: 45,
     );
 
-    var driverMarker = Marker(
-      markerId: MarkerId("driver-marker"),
+    var marker = Marker(
+      markerId: MarkerId(icon),
       position: LatLng(position.latitude, position.longitude),
-      infoWindow: InfoWindow(title: "My local"),
-      icon: driverIcon,
+      infoWindow: InfoWindow(title: infoWindow),
+      icon: bitmapIcon,
     );
 
     setState(() {
-      _markers.add(driverMarker);
+      _markers.add(marker);
     });
   }
 
@@ -136,16 +126,11 @@ class _RidePageState extends State<RidePage> {
             switch (request.status) {
               case UberRequestStatus.waiting:
               case UberRequestStatus.canceled:
-                _updateButtonWidget(
-                  message: "Accept ride",
-                  color: Color(0xff1ebbd8),
-                  function: _acceptRequest,
-                );
+                _statusWaiting(request);
                 break;
               case UberRequestStatus.onTheWay:
               case UberRequestStatus.onTrip:
-                  _showPassengerLocation();
-                _updateButtonWidget(message: "Going to the passenger");
+                _statusGoingToThePassenger();
                 break;
               case UberRequestStatus.done:
                 break;
@@ -229,13 +214,54 @@ class _RidePageState extends State<RidePage> {
     );
   }
 
+  _startTrip() {}
+
   // Bottom Button
-  _updateButtonWidget({
+  _statusWaiting(UberRequest request) {
+    _updateWidgets(
+      appbarMessage: request.passenger.name,
+      message: "Accept ride",
+      color: Color(0xff1ebbd8),
+      function: _acceptRequest,
+    );
+
+    if (request.driver != null) {
+      _showMarker(
+        request.driver!.position!,
+        "assets/images/driver.png",
+        "Driver",
+      );
+
+      _moveCamera(
+        CameraPosition(
+          target: LatLng(
+            request.driver!.position!.latitude,
+            request.driver!.position!.longitude,
+          ),
+          zoom: 19,
+        ),
+      );
+    }
+  }
+
+  _statusGoingToThePassenger() {
+    _showPassengerLocation();
+    _updateWidgets(
+      appbarMessage: "Going to the passenger",
+      message: "Start trip",
+      color: Color(0xff1ebbd8),
+      function: _startTrip,
+    );
+  }
+
+  _updateWidgets({
+    String appbarMessage = "",
     required String message,
     Color color = Colors.transparent,
     VoidCallback? function,
   }) {
     setState(() {
+      _appbarStatus = appbarMessage.isNotEmpty ? "- $appbarMessage" : "";
       _bottomButtonText = message;
       _bottomButtonColor = color;
       _bottomButtonFunction = function;
@@ -245,16 +271,17 @@ class _RidePageState extends State<RidePage> {
   @override
   void initState() {
     super.initState();
+    _createRequestListener();
 
     _getDriverLocation();
     _createDriverLocationListener();
-    _createRequestListener();
+
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("On a trip")),
+      appBar: AppBar(title: Text("Ride $_appbarStatus")),
       body: Stack(
         children: [
           GoogleMap(
