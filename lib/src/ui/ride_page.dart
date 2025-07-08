@@ -96,6 +96,34 @@ class _RidePageState extends State<RidePage> {
     controller.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
   }
 
+  _moveCameraBounds(LatLng driver, LatLng passenger) async {
+    var sLat = passenger.latitude;
+    var nLat = driver.latitude;
+    var sLng = passenger.longitude;
+    var nLng = driver.longitude;
+
+    if (driver.latitude <= passenger.latitude) {
+      sLat = driver.latitude;
+      nLat = passenger.latitude;
+    }
+
+    if (driver.longitude <= passenger.longitude) {
+      sLng = driver.longitude;
+      nLng = passenger.longitude;
+    }
+
+    var controller = await _mapController.future;
+    controller.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(sLat, sLng),
+          northeast: LatLng(nLat, nLng),
+        ),
+        100,
+      ),
+    );
+  }
+
   // Load Data
   _createRequestListener() {
     _db
@@ -116,9 +144,8 @@ class _RidePageState extends State<RidePage> {
                 break;
               case UberRequestStatus.onTheWay:
               case UberRequestStatus.onTrip:
-                _updateButtonWidget(
-                  message: "Going to the passenger"
-                );
+                  _showPassengerLocation();
+                _updateButtonWidget(message: "Going to the passenger");
                 break;
               case UberRequestStatus.done:
                 break;
@@ -153,7 +180,10 @@ class _RidePageState extends State<RidePage> {
   }
 
   _showPassengerLocation() {
-    _showBothMarkers(widget.request.driver!.position!, widget.request.passenger.position!);
+    _showBothMarkers(
+      widget.request.driver!.position!,
+      widget.request.passenger.position!,
+    );
   }
 
   _showBothMarkers(GeoPoint driver, GeoPoint passenger) async {
@@ -193,13 +223,9 @@ class _RidePageState extends State<RidePage> {
       _markers = markerList;
     });
 
-    var midLat = (driver.latitude + passenger.latitude)/2;
-    var midLng = (driver.longitude + passenger.longitude)/2;
-    _moveCamera(
-      CameraPosition(
-        target: LatLng(midLat, midLng),
-        zoom: 15,
-      ),
+    _moveCameraBounds(
+      LatLng(driver.latitude, driver.longitude),
+      LatLng(passenger.latitude, passenger.longitude),
     );
   }
 
