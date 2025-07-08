@@ -95,6 +95,11 @@ enum UberRequestStatus {
 
   const UberRequestStatus(this.value);
 
+  bool withDriver() {
+    return this == UberRequestStatus.onTheWay ||
+        this == UberRequestStatus.onTrip;
+  }
+
   static UberRequestStatus getByString(String text) {
     return UberRequestStatus.values.byName(text);
   }

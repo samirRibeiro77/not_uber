@@ -35,15 +35,6 @@ class _RidePageState extends State<RidePage> {
   String _appbarStatus = "";
 
   // Location and maps
-  _getDriverLocation() async {
-    var lastPosition = await Geolocator.getLastKnownPosition();
-
-    if (lastPosition != null) {
-      _currentLocation = GeoPoint(lastPosition.latitude, lastPosition.longitude);
-
-    }
-  }
-
   _createDriverLocationListener() async {
     await LocationHelper.isLocationEnabled();
 
@@ -54,8 +45,37 @@ class _RidePageState extends State<RidePage> {
 
     Geolocator.getPositionStream(locationSettings: settings).listen((position) {
       _currentLocation = GeoPoint(position.latitude, position.longitude);
+      _updateLocation(position: position);
 
+      if (widget.request.status.withDriver()) {
+        _updateDriverLocation();
+      }
     });
+  }
+
+  _updateLocation({Position? position}) {
+    if (position != null) {
+      setState(() {
+        _currentLocation = GeoPoint(position.latitude, position.longitude);
+      });
+    }
+
+    _showMarker(
+      _currentLocation,
+      "assets/images/driver.png",
+      "Driver",
+    );
+    _moveCamera(
+      CameraPosition(
+        target: LatLng(_currentLocation.latitude, _currentLocation.longitude),
+        zoom: 16,
+      ),
+    );
+  }
+
+  _updateDriverLocation() async {
+    var passenger = await UberUser.current();
+    passenger.updateLocation(widget.request.id, _currentLocation);
   }
 
   _showMarker(GeoPoint position, String icon, String infoWindow) async {
@@ -130,7 +150,7 @@ class _RidePageState extends State<RidePage> {
                 break;
               case UberRequestStatus.onTheWay:
               case UberRequestStatus.onTrip:
-                _statusGoingToThePassenger();
+                _statusGoingToThePassenger(request);
                 break;
               case UberRequestStatus.done:
                 break;
@@ -164,11 +184,19 @@ class _RidePageState extends State<RidePage> {
     _showPassengerLocation();
   }
 
-  _showPassengerLocation() {
-    _showBothMarkers(
-      widget.request.driver!.position!,
-      widget.request.passenger.position!,
-    );
+  _showPassengerLocation({UberRequest? request}) {
+    if (request != null) {
+      _showBothMarkers(
+        request.driver!.position!,
+        request.passenger.position!,
+      );
+    }
+    else {
+      _showBothMarkers(
+        widget.request.driver!.position!,
+        widget.request.passenger.position!,
+      );
+    }
   }
 
   _showBothMarkers(GeoPoint driver, GeoPoint passenger) async {
@@ -244,8 +272,8 @@ class _RidePageState extends State<RidePage> {
     }
   }
 
-  _statusGoingToThePassenger() {
-    _showPassengerLocation();
+  _statusGoingToThePassenger(UberRequest request) {
+    _showPassengerLocation(request: request);
     _updateWidgets(
       appbarMessage: "Going to the passenger",
       message: "Start trip",
@@ -273,9 +301,8 @@ class _RidePageState extends State<RidePage> {
     super.initState();
     _createRequestListener();
 
-    _getDriverLocation();
+    // _getDriverLocation();
     _createDriverLocationListener();
-
   }
 
   @override

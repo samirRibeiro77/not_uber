@@ -80,6 +80,17 @@ class UberUser {
     };
   }
 
+  updateLocation(String requestId, GeoPoint geoPoint) {
+    position = geoPoint;
+
+    var key = isDriver ? "driver" : "passenger";
+
+    FirebaseFirestore.instance
+        .collection(FirebaseHelper.collections.request)
+        .doc(requestId)
+        .update({key: toJson()});
+  }
+
   // Validade user fields
   String get _validName => name.isNotEmpty ? "" : "Name can't be empty";
 

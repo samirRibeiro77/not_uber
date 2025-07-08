@@ -78,20 +78,6 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   }
 
   // Map Functions
-  _getPassengerLocation() async {
-    var lastPosition = await Geolocator.getLastKnownPosition();
-
-    if (lastPosition != null) {
-      _showPassengerMarker(lastPosition);
-      _moveCamera(
-        CameraPosition(
-          target: LatLng(lastPosition.latitude, lastPosition.longitude),
-          zoom: 16,
-        ),
-      );
-    }
-  }
-
   _createPassengerLocationListener() async {
     await LocationHelper.isLocationEnabled();
 
@@ -101,18 +87,36 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     );
 
     Geolocator.getPositionStream(locationSettings: settings).listen((position) {
-      _showPassengerMarker(position);
-      _moveCamera(
-        CameraPosition(
-          target: LatLng(position.latitude, position.longitude),
-          zoom: 16,
-        ),
-      );
+      _updateLocation(position: position);
+
+      if (_lastRequestId.isNotEmpty) {
+        _updatePassengerLocation();
+      }
     });
   }
 
-  _showPassengerMarker(Position position) async {
-    _currentLocation = GeoPoint(position.latitude, position.latitude);
+  _updateLocation({Position? position}) {
+    if (position != null) {
+      setState(() {
+        _currentLocation = GeoPoint(position.latitude, position.longitude);
+      });
+    }
+
+    _showPassengerMarker(_currentLocation);
+    _moveCamera(
+      CameraPosition(
+        target: LatLng(_currentLocation.latitude, _currentLocation.longitude),
+        zoom: 16,
+      ),
+    );
+  }
+  
+  _updatePassengerLocation() async {
+    var passenger = await UberUser.current();
+    passenger.updateLocation(_lastRequestId, _currentLocation);
+  }
+
+  _showPassengerMarker(GeoPoint position) async {
     var ratio = MediaQuery
         .of(context)
         .devicePixelRatio;
@@ -222,12 +226,11 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
         .doc(passenger.id)
         .set(activeRequest.toJson());
 
-    _updateButtonWidget(
-      message: "Cancel",
-      showAddress: false,
-      color: Colors.red,
-      function: _cancelUber,
-    );
+    _statusWaiting();
+
+    setState(() {
+      _lastRequestId = driverRequest.id;
+    });
   }
 
   _cancelUber() async {
@@ -242,12 +245,11 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
           .doc(currentUser.id)
           .delete();
 
-      _updateButtonWidget(
-        message: "Call an Uber",
-        showAddress: true,
-        color: Color(0xff1ebbd8),
-        function: _callUber,
-      );
+      _statusEmptyTrip();
+    });
+
+    setState(() {
+      _lastRequestId = "";
     });
   }
 
@@ -259,6 +261,8 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
       color: Color(0xff1ebbd8),
       function: _callUber,
     );
+
+    _updateLocation();
   }
 
   _statusWaiting() {
@@ -294,7 +298,6 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   @override
   void initState() {
     super.initState();
-    _getPassengerLocation();
     _createPassengerLocationListener();
 
     _statusEmptyTrip();
