@@ -6,6 +6,7 @@ import 'package:not_uber/src/model/uber_user.dart';
 class UberRequest {
   late String _id;
   late Destination _destination;
+  late GeoPoint _origin;
   late UberUser _passenger;
   late UberUser? _driver;
   late UberRequestStatus _status;
@@ -52,7 +53,23 @@ class UberRequest {
   }
 
   startTrip() {
+    _origin = driver!.position!;
     _status = UberRequestStatus.onTrip;
+
+    FirebaseFirestore.instance
+        .collection(FirebaseHelper.collections.activeRequest)
+        .doc(_passenger.id)
+        .update({"status": UberRequestStatus.onTrip});
+
+    FirebaseFirestore.instance
+        .collection(FirebaseHelper.collections.activeRequest)
+        .doc(_driver?.id)
+        .update({"status": UberRequestStatus.onTrip});
+
+    FirebaseFirestore.instance
+        .collection(FirebaseHelper.collections.request)
+        .doc(_id)
+        .update(toJson());
   }
 
   finishTrip() {
@@ -68,6 +85,7 @@ class UberRequest {
       "id": _id,
       "status": _status.value,
       "destination": _destination.toJson(),
+      "origin": _origin,
       "passenger": _passenger.toJson(),
       "driver": _driver?.toJson(),
     };

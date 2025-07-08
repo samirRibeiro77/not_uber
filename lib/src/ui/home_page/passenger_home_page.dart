@@ -26,7 +26,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   final _destinationController = TextEditingController();
 
   var _cameraPosition = CameraPosition(target: LatLng(0, 0));
-  final Set<Marker> _markers = {};
+  Set<Marker> _markers = {};
   var _lastRequestId = "";
   var _currentLocation = GeoPoint(0, 0);
 
@@ -63,8 +63,10 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
         var request = UberRequest.fromFirebase(map: snapshot.data());
         switch (request.status) {
           case UberRequestStatus.waiting:
-          case UberRequestStatus.onTheWay:
             _statusWaiting();
+            break;
+          case UberRequestStatus.onTheWay:
+            _statusDriverOnTheWay(request);
             break;
           case UberRequestStatus.onTrip:
             _statusOnTrip();
@@ -144,6 +146,84 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
       _cameraPosition = cameraPosition;
     });
     controller.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+  }
+
+  _showDriverLocation(UberRequest request) {
+    _showBothMarkers(
+      request.passenger.position!,
+      request.driver!.position!,
+    );
+  }
+
+  _showBothMarkers(GeoPoint passenger, GeoPoint driver) async {
+    Set<Marker> markerList = {};
+    var ratio = MediaQuery.of(context).devicePixelRatio;
+
+    var passengerIcon = await BitmapDescriptor.asset(
+      ImageConfiguration(devicePixelRatio: ratio),
+      "assets/images/passenger.png",
+      height: 45,
+    );
+
+    var passengerMarker = Marker(
+      markerId: MarkerId("passenger-marker"),
+      position: LatLng(passenger.latitude, passenger.longitude),
+      infoWindow: InfoWindow(title: "Passenger"),
+      icon: passengerIcon,
+    );
+
+    var driverIcon = await BitmapDescriptor.asset(
+      ImageConfiguration(devicePixelRatio: ratio),
+      "assets/images/driver.png",
+      height: 45,
+    );
+
+    var driverMarker = Marker(
+      markerId: MarkerId("driver-marker"),
+      position: LatLng(driver.latitude, driver.longitude),
+      infoWindow: InfoWindow(title: "Driver"),
+      icon: driverIcon,
+    );
+
+    markerList.add(passengerMarker);
+    markerList.add(driverMarker);
+
+    setState(() {
+      _markers = markerList;
+    });
+
+    _moveCameraBounds(
+      LatLng(driver.latitude, driver.longitude),
+      LatLng(passenger.latitude, passenger.longitude),
+    );
+  }
+
+  _moveCameraBounds(LatLng driver, LatLng passenger) async {
+    var sLat = passenger.latitude;
+    var nLat = driver.latitude;
+    var sLng = passenger.longitude;
+    var nLng = driver.longitude;
+
+    if (driver.latitude <= passenger.latitude) {
+      sLat = driver.latitude;
+      nLat = passenger.latitude;
+    }
+
+    if (driver.longitude <= passenger.longitude) {
+      sLng = driver.longitude;
+      nLng = passenger.longitude;
+    }
+
+    var controller = await _mapController.future;
+    controller.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(sLat, sLng),
+          northeast: LatLng(nLat, nLng),
+        ),
+        100,
+      ),
+    );
   }
 
   // Request functions
@@ -272,6 +352,15 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
       color: Colors.red,
       function: _cancelUber,
     );
+  }
+
+  _statusDriverOnTheWay(UberRequest request) {
+    _updateButtonWidget(
+      message: "Driver on your way",
+      showAddress: false,
+    );
+
+    _showDriverLocation(request);
   }
 
   _statusOnTrip() {

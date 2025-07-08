@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -212,7 +211,7 @@ class _RidePageState extends State<RidePage> {
     var passengerMarker = Marker(
       markerId: MarkerId("passenger-marker"),
       position: LatLng(passenger.latitude, passenger.longitude),
-      infoWindow: InfoWindow(title: "My local"),
+      infoWindow: InfoWindow(title: "Passenger"),
       icon: passengerIcon,
     );
 
@@ -225,7 +224,7 @@ class _RidePageState extends State<RidePage> {
     var driverMarker = Marker(
       markerId: MarkerId("driver-marker"),
       position: LatLng(driver.latitude, driver.longitude),
-      infoWindow: InfoWindow(title: "My local"),
+      infoWindow: InfoWindow(title: "Driver"),
       icon: driverIcon,
     );
 
@@ -242,7 +241,9 @@ class _RidePageState extends State<RidePage> {
     );
   }
 
-  _startTrip() {}
+  _startTrip(UberRequest request) {
+    request.startTrip();
+  }
 
   // Bottom Button
   _statusWaiting(UberRequest request) {
@@ -278,7 +279,7 @@ class _RidePageState extends State<RidePage> {
       appbarMessage: "Going to the passenger",
       message: "Start trip",
       color: Color(0xff1ebbd8),
-      function: _startTrip,
+      function: () => _startTrip(request),
     );
   }
 
