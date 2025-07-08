@@ -28,6 +28,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   var _cameraPosition = CameraPosition(target: LatLng(0, 0));
   final Set<Marker> _markers = {};
   var _lastRequestId = "";
+  var _currentLocation = GeoPoint(0, 0);
 
   // Control screen widgets
   var _loading = false;
@@ -121,6 +122,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   }
 
   _showPassengerMarker(Position position) async {
+    _currentLocation = GeoPoint(position.latitude, position.latitude);
     var ratio = MediaQuery.of(context).devicePixelRatio;
     var passengerIcon = await BitmapDescriptor.asset(
       ImageConfiguration(devicePixelRatio: ratio),
@@ -210,6 +212,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
 
   _requestRide(Destination destination) async {
     var passenger = await UberUser.current();
+    passenger.position = _currentLocation;
 
     var driverRequest = UberRequest(
       destination: destination,
