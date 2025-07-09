@@ -6,7 +6,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:not_uber/src/helper/firebase_helper.dart';
 import 'package:not_uber/src/helper/location_helper.dart';
 import 'package:not_uber/src/model/UberMarker.dart';
-import 'package:not_uber/src/model/uber_active_request.dart';
 import 'package:not_uber/src/model/uber_request.dart';
 import 'package:not_uber/src/model/uber_user.dart';
 
@@ -152,6 +151,7 @@ class _RidePageState extends State<RidePage> {
                 _statusOnTrip(request);
                 break;
               case UberRequestStatus.done:
+                _statusTripEnded(request);
                 break;
             }
           }
@@ -159,30 +159,6 @@ class _RidePageState extends State<RidePage> {
   }
 
   // Request functions
-  _acceptRequest() async {
-    var driver = await UberUser.current();
-    driver.position = _currentLocation;
-
-    widget.request.driverAcceptRequest(driver);
-
-    _db
-        .collection(FirebaseHelper.collections.request)
-        .doc(widget.request.id)
-        .update(widget.request.toJson());
-
-    var activeRequest = UberActiveRequest.fromRequest(widget.request);
-    _db
-        .collection(FirebaseHelper.collections.activeRequest)
-        .doc(widget.request.passenger.id)
-        .update(activeRequest.toJson());
-    _db
-        .collection(FirebaseHelper.collections.activeRequest)
-        .doc(driver.id)
-        .set(activeRequest.toJson());
-
-    _showPassengerLocation();
-  }
-
   _showPassengerLocation({UberRequest? request}) {
     var ratio = MediaQuery.of(context).devicePixelRatio;
 
@@ -234,6 +210,12 @@ class _RidePageState extends State<RidePage> {
     );
   }
 
+  _acceptRequest(UberRequest request) async {
+    var driver = await UberUser.current();
+    request.driverAcceptRequest(driver, _currentLocation);
+    _showPassengerLocation();
+  }
+
   _startTrip(UberRequest request) {
     request.startTrip();
   }
@@ -242,13 +224,15 @@ class _RidePageState extends State<RidePage> {
     request.finishTrip();
   }
 
+  _confirmTripEnded(UberRequest request){}
+
   // Bottom Button
   _statusWaiting(UberRequest request) {
     _updateWidgets(
       appbarMessage: request.passenger.name,
       message: "Accept ride",
       color: Color(0xff1ebbd8),
-      function: _acceptRequest,
+      function: () => _acceptRequest(request),
     );
 
     if (request.driver != null) {
@@ -316,6 +300,15 @@ class _RidePageState extends State<RidePage> {
     );
 
     _showBothMarkers(origin, destination);
+  }
+
+  _statusTripEnded(UberRequest request) {
+    _updateWidgets(
+      appbarMessage: "Trip ended",
+      message: "Confirm - R\$${request.price}",
+      color: Color(0xff1ebbd8),
+      function: () => _confirmTripEnded(request),
+    );
   }
 
   _updateWidgets({

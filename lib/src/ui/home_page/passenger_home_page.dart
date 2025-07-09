@@ -30,6 +30,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   Set<Marker> _markers = {};
   var _lastRequestId = "";
   var _currentLocation = GeoPoint(0, 0);
+  UberRequest? _currentRequest;
 
   // Control screen widgets
   var _loading = false;
@@ -61,16 +62,16 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
         .snapshots()
         .listen((snapshot) {
       if (snapshot.data() != null) {
-        var request = UberRequest.fromFirebase(map: snapshot.data());
-        switch (request.status) {
+        _currentRequest = UberRequest.fromFirebase(map: snapshot.data());
+        switch (_currentRequest!.status) {
           case UberRequestStatus.waiting:
             _statusWaiting();
             break;
           case UberRequestStatus.onTheWay:
-            _statusDriverOnTheWay(request);
+            _statusDriverOnTheWay(_currentRequest!);
             break;
           case UberRequestStatus.onTrip:
-            _statusOnTrip(request);
+            _statusOnTrip(_currentRequest!);
             break;
           case UberRequestStatus.done:
           case UberRequestStatus.canceled:
@@ -105,13 +106,15 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
       });
     }
 
-    _showPassengerMarker(_currentLocation);
-    _moveCamera(
-      CameraPosition(
-        target: LatLng(_currentLocation.latitude, _currentLocation.longitude),
-        zoom: 16,
-      ),
-    );
+    if (_currentRequest != null && !_currentRequest!.status.withDriver()) {
+      _showPassengerMarker(_currentLocation);
+      _moveCamera(
+        CameraPosition(
+          target: LatLng(_currentLocation.latitude, _currentLocation.longitude),
+          zoom: 16,
+        ),
+      );
+    }
   }
   
   _updatePassengerLocation() async {

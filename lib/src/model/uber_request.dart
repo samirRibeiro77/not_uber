@@ -1,15 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import 'package:not_uber/src/helper/firebase_helper.dart';
 import 'package:not_uber/src/model/destination.dart';
+import 'package:not_uber/src/model/uber_active_request.dart';
 import 'package:not_uber/src/model/uber_user.dart';
 
 class UberRequest {
   late String _id;
   late Destination _destination;
-  late GeoPoint _origin;
+  late GeoPoint? _origin;
   late UberUser _passenger;
   late UberUser? _driver;
   late UberRequestStatus _status;
+  late double? _price;
 
   UberRequest({
     required Destination destination,
@@ -36,48 +40,79 @@ class UberRequest {
       _passenger = UberUser.fromFirebase(map: snapshot["passenger"]);
       _driver = UberUser.fromFirebaseOrNull(map: snapshot["driver"]);
       _status = UberRequestStatus.getByString(snapshot["status"]);
+      _origin = snapshot["origin"];
+      _price = snapshot["price"];
     } else if (map != null) {
       _id = map["id"];
       _destination = Destination.fromFirebase(map: map["destination"]);
       _passenger = UberUser.fromFirebase(map: map["passenger"]);
       _driver = UberUser.fromFirebaseOrNull(map: map["driver"]);
       _status = UberRequestStatus.getByString(map["status"]);
+      _origin = map["origin"];
+      _price = map["price"];
     } else {
       throw Exception("UberRequest needs to be initialized correctly");
     }
   }
 
-  driverAcceptRequest(UberUser driver) {
-    _status = UberRequestStatus.onTheWay;
+  driverAcceptRequest(UberUser driver, GeoPoint driverPosition) {
+    driver.position = driverPosition;
     _driver = driver;
+
+    // Active Request
+    var activeRequest = UberActiveRequest.fromRequest(this);
+    FirebaseFirestore.instance
+        .collection(FirebaseHelper.collections.activeRequest)
+        .doc(driver.id)
+        .set(activeRequest.toJson());
+
+    _updateStatus(UberRequestStatus.onTheWay);
   }
 
   startTrip() {
     _origin = driver!.position!;
-    _status = UberRequestStatus.onTrip;
-
-    FirebaseFirestore.instance
-        .collection(FirebaseHelper.collections.activeRequest)
-        .doc(_passenger.id)
-        .update({"status": UberRequestStatus.onTrip});
-
-    FirebaseFirestore.instance
-        .collection(FirebaseHelper.collections.activeRequest)
-        .doc(_driver?.id)
-        .update({"status": UberRequestStatus.onTrip});
-
-    FirebaseFirestore.instance
-        .collection(FirebaseHelper.collections.request)
-        .doc(_id)
-        .update(toJson());
+    _updateStatus(UberRequestStatus.onTrip);
   }
 
   finishTrip() {
-    _status = UberRequestStatus.done;
+    var distanceKm =
+        Geolocator.distanceBetween(
+          _origin!.latitude,
+          _origin!.longitude,
+          _destination.position.latitude,
+          _destination.position.longitude,
+        ) /
+        1000;
+
+    // Price is R$8,00 per KM
+    _price = distanceKm * 8;
+
+    _updateStatus(UberRequestStatus.done);
   }
 
   cancelTrip() {
-    _status = UberRequestStatus.done;
+    _updateStatus(UberRequestStatus.canceled);
+  }
+
+  _updateStatus(UberRequestStatus uberRequestStatus) {
+    _status = uberRequestStatus;
+    final db = FirebaseFirestore.instance;
+
+    // Active Request
+    db
+        .collection(FirebaseHelper.collections.activeRequest)
+        .doc(_passenger.id)
+        .update({"status": uberRequestStatus.value});
+
+    if (driver != null) {
+      db
+          .collection(FirebaseHelper.collections.activeRequest)
+          .doc(_driver?.id)
+          .update({"status": uberRequestStatus.value});
+    }
+
+    // This Request
+    db.collection(FirebaseHelper.collections.request).doc(_id).update(toJson());
   }
 
   Map<String, dynamic> toJson() {
@@ -88,6 +123,7 @@ class UberRequest {
       "origin": _origin,
       "passenger": _passenger.toJson(),
       "driver": _driver?.toJson(),
+      "price": _price
     };
   }
 
@@ -101,7 +137,14 @@ class UberRequest {
 
   UberUser? get driver => _driver;
 
-  GeoPoint get origin => _origin;
+  GeoPoint? get origin => _origin;
+
+  String get price => _getPrice();
+
+  String _getPrice() {
+    var formatter = NumberFormat("#,##0.00", "pt_BR");
+    return formatter.format(_price);
+  }
 }
 
 enum UberRequestStatus {
