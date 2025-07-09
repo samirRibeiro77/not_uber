@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:not_uber/src/helper/firebase_helper.dart';
 import 'package:not_uber/src/helper/location_helper.dart';
+import 'package:not_uber/src/model/UberMarker.dart';
 import 'package:not_uber/src/model/uber_active_request.dart';
 import 'package:not_uber/src/model/uber_request.dart';
 import 'package:not_uber/src/model/uber_user.dart';
@@ -43,7 +44,6 @@ class _RidePageState extends State<RidePage> {
     );
 
     Geolocator.getPositionStream(locationSettings: settings).listen((position) {
-      _currentLocation = GeoPoint(position.latitude, position.longitude);
       _updateLocation(position: position);
 
       if (widget.request.status.withDriver()) {
@@ -59,17 +59,15 @@ class _RidePageState extends State<RidePage> {
       });
     }
 
-    _showMarker(
-      _currentLocation,
-      "assets/images/driver.png",
-      "Driver",
-    );
-    _moveCamera(
-      CameraPosition(
-        target: LatLng(_currentLocation.latitude, _currentLocation.longitude),
-        zoom: 16,
-      ),
-    );
+    if (!widget.request.status.withDriver()) {
+      _showMarker(_currentLocation, "assets/images/driver.png", "Driver");
+      _moveCamera(
+        CameraPosition(
+          target: LatLng(_currentLocation.latitude, _currentLocation.longitude),
+          zoom: 16,
+        ),
+      );
+    }
   }
 
   _updateDriverLocation() async {
@@ -105,20 +103,20 @@ class _RidePageState extends State<RidePage> {
     controller.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
   }
 
-  _moveCameraBounds(LatLng driver, LatLng passenger) async {
-    var sLat = passenger.latitude;
-    var nLat = driver.latitude;
-    var sLng = passenger.longitude;
-    var nLng = driver.longitude;
+  _moveCameraBounds(LatLng origin, LatLng destination) async {
+    var sLat = destination.latitude;
+    var nLat = origin.latitude;
+    var sLng = destination.longitude;
+    var nLng = origin.longitude;
 
-    if (driver.latitude <= passenger.latitude) {
-      sLat = driver.latitude;
-      nLat = passenger.latitude;
+    if (origin.latitude <= destination.latitude) {
+      sLat = origin.latitude;
+      nLat = destination.latitude;
     }
 
-    if (driver.longitude <= passenger.longitude) {
-      sLng = driver.longitude;
-      nLng = passenger.longitude;
+    if (origin.longitude <= destination.longitude) {
+      sLng = origin.longitude;
+      nLng = destination.longitude;
     }
 
     var controller = await _mapController.future;
@@ -148,8 +146,10 @@ class _RidePageState extends State<RidePage> {
                 _statusWaiting(request);
                 break;
               case UberRequestStatus.onTheWay:
-              case UberRequestStatus.onTrip:
                 _statusGoingToThePassenger(request);
+                break;
+              case UberRequestStatus.onTrip:
+                _statusOnTrip(request);
                 break;
               case UberRequestStatus.done:
                 break;
@@ -184,65 +184,62 @@ class _RidePageState extends State<RidePage> {
   }
 
   _showPassengerLocation({UberRequest? request}) {
+    var ratio = MediaQuery.of(context).devicePixelRatio;
+
     if (request != null) {
-      _showBothMarkers(
-        request.driver!.position!,
-        request.passenger.position!,
+      var origin = UberMarker(
+        position: request.driver!.position!,
+        type: UberMarkerType.driver,
+        pixelRation: ratio,
       );
-    }
-    else {
-      _showBothMarkers(
-        widget.request.driver!.position!,
-        widget.request.passenger.position!,
+      var destination = UberMarker(
+        position: request.passenger.position!,
+        type: UberMarkerType.passenger,
+        pixelRation: ratio,
       );
+
+      _showBothMarkers(origin, destination);
+    } else {
+      var origin = UberMarker(
+        position: widget.request.driver!.position!,
+        type: UberMarkerType.driver,
+        pixelRation: ratio,
+      );
+      var destination = UberMarker(
+        position: widget.request.passenger.position!,
+        type: UberMarkerType.passenger,
+        pixelRation: ratio,
+      );
+
+      _showBothMarkers(origin, destination);
     }
   }
 
-  _showBothMarkers(GeoPoint driver, GeoPoint passenger) async {
+  _showBothMarkers(UberMarker origin, UberMarker destination) async {
     Set<Marker> markerList = {};
-    var ratio = MediaQuery.of(context).devicePixelRatio;
 
-    var passengerIcon = await BitmapDescriptor.asset(
-      ImageConfiguration(devicePixelRatio: ratio),
-      "assets/images/passenger.png",
-      height: 45,
-    );
+    var originMarker = await origin.getMarker();
+    var destinationMarker = await destination.getMarker();
 
-    var passengerMarker = Marker(
-      markerId: MarkerId("passenger-marker"),
-      position: LatLng(passenger.latitude, passenger.longitude),
-      infoWindow: InfoWindow(title: "Passenger"),
-      icon: passengerIcon,
-    );
-
-    var driverIcon = await BitmapDescriptor.asset(
-      ImageConfiguration(devicePixelRatio: ratio),
-      "assets/images/driver.png",
-      height: 45,
-    );
-
-    var driverMarker = Marker(
-      markerId: MarkerId("driver-marker"),
-      position: LatLng(driver.latitude, driver.longitude),
-      infoWindow: InfoWindow(title: "Driver"),
-      icon: driverIcon,
-    );
-
-    markerList.add(passengerMarker);
-    markerList.add(driverMarker);
+    markerList.add(originMarker);
+    markerList.add(destinationMarker);
 
     setState(() {
       _markers = markerList;
     });
 
     _moveCameraBounds(
-      LatLng(driver.latitude, driver.longitude),
-      LatLng(passenger.latitude, passenger.longitude),
+      LatLng(origin.position.latitude, origin.position.longitude),
+      LatLng(destination.position.latitude, destination.position.longitude),
     );
   }
 
   _startTrip(UberRequest request) {
     request.startTrip();
+  }
+
+  _finishTrip(UberRequest request) {
+    request.finishTrip();
   }
 
   // Bottom Button
@@ -281,6 +278,30 @@ class _RidePageState extends State<RidePage> {
       color: Color(0xff1ebbd8),
       function: () => _startTrip(request),
     );
+  }
+
+  _statusOnTrip(UberRequest request) {
+    var ratio = MediaQuery.of(context).devicePixelRatio;
+
+    _updateWidgets(
+      appbarMessage: "On a trip",
+      message: "Finish trip",
+      color: Color(0xff1ebbd8),
+      function: () => _finishTrip(request),
+    );
+
+    var origin = UberMarker(
+      position: request.driver!.position!,
+      type: UberMarkerType.driver,
+      pixelRation: ratio,
+    );
+    var destination = UberMarker(
+      position: request.destination.position,
+      type: UberMarkerType.destination,
+      pixelRation: ratio,
+    );
+
+    _showBothMarkers(origin, destination);
   }
 
   _updateWidgets({

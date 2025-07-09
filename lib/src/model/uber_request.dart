@@ -100,6 +100,8 @@ class UberRequest {
   String get id => _id;
 
   UberUser? get driver => _driver;
+
+  GeoPoint get origin => _origin;
 }
 
 enum UberRequestStatus {

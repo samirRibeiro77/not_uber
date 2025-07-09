@@ -53,6 +53,9 @@ class Destination {
     };
   }
 
+
+  GeoPoint get position => _latLng;
+
   String toShortString() {
     return "$_street, $_number, $_neighborhood";
   }
