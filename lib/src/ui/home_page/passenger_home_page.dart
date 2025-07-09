@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:not_uber/src/helper/firebase_helper.dart';
 import 'package:not_uber/src/helper/location_helper.dart';
+import 'package:not_uber/src/model/UberMarker.dart';
 import 'package:not_uber/src/model/destination.dart';
 import 'package:not_uber/src/model/uber_active_request.dart';
 import 'package:not_uber/src/model/uber_request.dart';
@@ -69,7 +70,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
             _statusDriverOnTheWay(request);
             break;
           case UberRequestStatus.onTrip:
-            _statusOnTrip();
+            _statusOnTrip(request);
             break;
           case UberRequestStatus.done:
           case UberRequestStatus.canceled:
@@ -149,52 +150,38 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   }
 
   _showDriverLocation(UberRequest request) {
-    _showBothMarkers(
-      request.passenger.position!,
-      request.driver!.position!,
-    );
-  }
-
-  _showBothMarkers(GeoPoint passenger, GeoPoint driver) async {
-    Set<Marker> markerList = {};
     var ratio = MediaQuery.of(context).devicePixelRatio;
 
-    var passengerIcon = await BitmapDescriptor.asset(
-      ImageConfiguration(devicePixelRatio: ratio),
-      "assets/images/passenger.png",
-      height: 45,
+    var origin = UberMarker(
+      position: request.driver!.position!,
+      type: UberMarkerType.driver,
+      pixelRation: ratio,
+    );
+    var destination = UberMarker(
+      position: request.passenger.position!,
+      type: UberMarkerType.passenger,
+      pixelRation: ratio,
     );
 
-    var passengerMarker = Marker(
-      markerId: MarkerId("passenger-marker"),
-      position: LatLng(passenger.latitude, passenger.longitude),
-      infoWindow: InfoWindow(title: "Passenger"),
-      icon: passengerIcon,
-    );
+    _showBothMarkers(origin, destination);
+  }
 
-    var driverIcon = await BitmapDescriptor.asset(
-      ImageConfiguration(devicePixelRatio: ratio),
-      "assets/images/driver.png",
-      height: 45,
-    );
+  _showBothMarkers(UberMarker origin, UberMarker destination) async {
+    Set<Marker> markerList = {};
 
-    var driverMarker = Marker(
-      markerId: MarkerId("driver-marker"),
-      position: LatLng(driver.latitude, driver.longitude),
-      infoWindow: InfoWindow(title: "Driver"),
-      icon: driverIcon,
-    );
+    var originMarker = await origin.getMarker();
+    var destinationMarker = await destination.getMarker();
 
-    markerList.add(passengerMarker);
-    markerList.add(driverMarker);
+    markerList.add(originMarker);
+    markerList.add(destinationMarker);
 
     setState(() {
       _markers = markerList;
     });
 
     _moveCameraBounds(
-      LatLng(driver.latitude, driver.longitude),
-      LatLng(passenger.latitude, passenger.longitude),
+      LatLng(origin.position.latitude, origin.position.longitude),
+      LatLng(destination.position.latitude, destination.position.longitude),
     );
   }
 
@@ -363,11 +350,26 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     _showDriverLocation(request);
   }
 
-  _statusOnTrip() {
+  _statusOnTrip(UberRequest request) {
+    var ratio = MediaQuery.of(context).devicePixelRatio;
+
     _updateButtonWidget(
       message: "On a trip",
       showAddress: false,
     );
+
+    var origin = UberMarker(
+      position: request.driver!.position!,
+      type: UberMarkerType.driver,
+      pixelRation: ratio,
+    );
+    var destination = UberMarker(
+      position: request.destination.position,
+      type: UberMarkerType.destination,
+      pixelRation: ratio,
+    );
+
+    _showBothMarkers(origin, destination);
   }
 
   _updateButtonWidget({

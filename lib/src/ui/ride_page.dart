@@ -271,13 +271,27 @@ class _RidePageState extends State<RidePage> {
   }
 
   _statusGoingToThePassenger(UberRequest request) {
-    _showPassengerLocation(request: request);
+    var ratio = MediaQuery.of(context).devicePixelRatio;
+
     _updateWidgets(
       appbarMessage: "Going to the passenger",
       message: "Start trip",
       color: Color(0xff1ebbd8),
       function: () => _startTrip(request),
     );
+
+    var origin = UberMarker(
+      position: request.driver!.position!,
+      type: UberMarkerType.driver,
+      pixelRation: ratio,
+    );
+    var destination = UberMarker(
+      position: request.passenger.position!,
+      type: UberMarkerType.passenger,
+      pixelRation: ratio,
+    );
+
+    _showBothMarkers(origin, destination);
   }
 
   _statusOnTrip(UberRequest request) {
