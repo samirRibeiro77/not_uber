@@ -25,6 +25,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
 
   final _mapController = Completer<GoogleMapController>();
   final _destinationController = TextEditingController();
+  StreamSubscription? _subscription;
 
   var _cameraPosition = CameraPosition(target: LatLng(0, 0));
   Set<Marker> _markers = {};
@@ -56,7 +57,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   }
 
   _createRequestListener(String requestId) async {
-    _db
+    _subscription = _db
         .collection(FirebaseHelper.collections.request)
         .doc(requestId)
         .snapshots()
@@ -77,7 +78,7 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
             _statusTripEnded(_currentRequest!);
           case UberRequestStatus.done:
           case UberRequestStatus.canceled:
-            _statusEmptyTrip();
+            _statusTripComplete();
             break;
         }
       }
@@ -309,19 +310,13 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
   }
 
   _cancelUber() async {
-    var currentUser = await UberUser.current();
-    _db
-        .collection(FirebaseHelper.collections.request)
-        .doc(_lastRequestId)
-        .update({"status": UberRequestStatus.canceled.value})
-        .then((_) {
-      _db
-          .collection(FirebaseHelper.collections.activeRequest)
-          .doc(currentUser.id)
-          .delete();
-
-      _statusEmptyTrip();
-    });
+    if (_currentRequest != null) {
+      _currentRequest!.cancelTrip();
+    }
+    if (_subscription != null) {
+      _subscription!.cancel();
+      _subscription = null;
+    }
 
     setState(() {
       _lastRequestId = "";
@@ -396,6 +391,15 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
         zoom: 19,
       ),
     );
+  }
+
+  _statusTripComplete() {
+    if (_subscription != null) {
+      _subscription!.cancel();
+      _subscription = null;
+    }
+
+    _statusEmptyTrip();
   }
 
   _updateButtonWidget({
