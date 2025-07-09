@@ -9,11 +9,11 @@ import 'package:not_uber/src/model/uber_user.dart';
 class UberRequest {
   late String _id;
   late Destination _destination;
-  late GeoPoint? _origin;
+  GeoPoint? _origin;
   late UberUser _passenger;
   late UberUser? _driver;
   late UberRequestStatus _status;
-  late double? _price;
+  double? _price;
 
   UberRequest({
     required Destination destination,
@@ -87,11 +87,34 @@ class UberRequest {
     // Price is R$8,00 per KM
     _price = distanceKm * 8;
 
+    _updateStatus(UberRequestStatus.waitingPayment);
+  }
+
+  completeTrip() {
     _updateStatus(UberRequestStatus.done);
+    _deleteActiveRequest();
   }
 
   cancelTrip() {
     _updateStatus(UberRequestStatus.canceled);
+    _deleteActiveRequest();
+  }
+
+  _deleteActiveRequest() {
+    final db = FirebaseFirestore.instance;
+
+    // Active Request
+    db
+        .collection(FirebaseHelper.collections.activeRequest)
+        .doc(_passenger.id)
+        .delete();
+
+    if (driver != null) {
+      db
+          .collection(FirebaseHelper.collections.activeRequest)
+          .doc(_driver?.id)
+          .delete();
+    }
   }
 
   _updateStatus(UberRequestStatus uberRequestStatus) {
@@ -123,7 +146,7 @@ class UberRequest {
       "origin": _origin,
       "passenger": _passenger.toJson(),
       "driver": _driver?.toJson(),
-      "price": _price
+      "price": _price,
     };
   }
 
@@ -151,6 +174,7 @@ enum UberRequestStatus {
   waiting("waiting"),
   onTheWay("onTheWay"),
   onTrip("onTrip"),
+  waitingPayment("waitingPayment"),
   done("done"),
   canceled("canceled");
 
@@ -160,7 +184,8 @@ enum UberRequestStatus {
 
   bool withDriver() {
     return this == UberRequestStatus.onTheWay ||
-        this == UberRequestStatus.onTrip;
+        this == UberRequestStatus.onTrip ||
+        this == UberRequestStatus.waitingPayment;
   }
 
   static UberRequestStatus getByString(String text) {

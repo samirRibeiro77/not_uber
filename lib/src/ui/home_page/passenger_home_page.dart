@@ -73,8 +73,11 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
           case UberRequestStatus.onTrip:
             _statusOnTrip(_currentRequest!);
             break;
+          case UberRequestStatus.waitingPayment:
+            _statusTripEnded(_currentRequest!);
           case UberRequestStatus.done:
           case UberRequestStatus.canceled:
+            _statusEmptyTrip();
             break;
         }
       }
@@ -106,8 +109,8 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
       });
     }
 
-    if (_currentRequest != null && !_currentRequest!.status.withDriver()) {
-      _showPassengerMarker(_currentLocation);
+    if (_currentRequest == null) {
+      _showMarker(_currentLocation, "assets/images/passenger.png", "My location");
       _moveCamera(
         CameraPosition(
           target: LatLng(_currentLocation.latitude, _currentLocation.longitude),
@@ -122,25 +125,27 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     passenger.updateLocation(_lastRequestId, _currentLocation);
   }
 
-  _showPassengerMarker(GeoPoint position) async {
-    var ratio = MediaQuery
-        .of(context)
-        .devicePixelRatio;
-    var passengerIcon = await BitmapDescriptor.asset(
+  _showMarker(GeoPoint position, String icon, String infoWindow) async {
+    Set<Marker> oneMarker = {};
+
+    var ratio = MediaQuery.of(context).devicePixelRatio;
+    var bitmapIcon = await BitmapDescriptor.asset(
       ImageConfiguration(devicePixelRatio: ratio),
-      "assets/images/passenger.png",
+      icon,
       height: 45,
     );
 
-    var passengerMarker = Marker(
-      markerId: MarkerId("passenger-marker"),
+    var marker = Marker(
+      markerId: MarkerId(icon),
       position: LatLng(position.latitude, position.longitude),
-      infoWindow: InfoWindow(title: "My local"),
-      icon: passengerIcon,
+      infoWindow: InfoWindow(title: infoWindow),
+      icon: bitmapIcon,
     );
 
+    oneMarker.add(marker);
+
     setState(() {
-      _markers.add(passengerMarker);
+      _markers = oneMarker;
     });
   }
 
@@ -373,6 +378,24 @@ class _PassengerHomePageState extends State<PassengerHomePage> {
     );
 
     _showBothMarkers(origin, destination);
+  }
+
+  _statusTripEnded(UberRequest request) {
+    _updateButtonWidget(
+      message: "Price - R\$${request.price}",
+      color: Colors.green,
+      showAddress: false,
+      function: (){}
+    );
+
+    var endTripPosition = request.destination.position;
+    _showMarker(endTripPosition, "assets/images/destination.png", "Destination arrived");
+    _moveCamera(
+      CameraPosition(
+        target: LatLng(endTripPosition.latitude, endTripPosition.longitude),
+        zoom: 19,
+      ),
+    );
   }
 
   _updateButtonWidget({

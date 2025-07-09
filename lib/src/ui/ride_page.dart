@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:not_uber/src/helper/firebase_helper.dart';
 import 'package:not_uber/src/helper/location_helper.dart';
+import 'package:not_uber/src/helper/route_generator.dart';
 import 'package:not_uber/src/model/UberMarker.dart';
 import 'package:not_uber/src/model/uber_request.dart';
 import 'package:not_uber/src/model/uber_user.dart';
@@ -75,6 +76,8 @@ class _RidePageState extends State<RidePage> {
   }
 
   _showMarker(GeoPoint position, String icon, String infoWindow) async {
+    Set<Marker> oneMarker = {};
+
     var ratio = MediaQuery.of(context).devicePixelRatio;
     var bitmapIcon = await BitmapDescriptor.asset(
       ImageConfiguration(devicePixelRatio: ratio),
@@ -89,8 +92,10 @@ class _RidePageState extends State<RidePage> {
       icon: bitmapIcon,
     );
 
+    oneMarker.add(marker);
+
     setState(() {
-      _markers.add(marker);
+      _markers = oneMarker;
     });
   }
 
@@ -150,8 +155,11 @@ class _RidePageState extends State<RidePage> {
               case UberRequestStatus.onTrip:
                 _statusOnTrip(request);
                 break;
-              case UberRequestStatus.done:
+              case UberRequestStatus.waitingPayment:
                 _statusTripEnded(request);
+                break;
+              case UberRequestStatus.done:
+                _statusTripCompleted();
                 break;
             }
           }
@@ -216,15 +224,9 @@ class _RidePageState extends State<RidePage> {
     _showPassengerLocation();
   }
 
-  _startTrip(UberRequest request) {
-    request.startTrip();
+  _confirmTripEnded(UberRequest request){
+    request.completeTrip();
   }
-
-  _finishTrip(UberRequest request) {
-    request.finishTrip();
-  }
-
-  _confirmTripEnded(UberRequest request){}
 
   // Bottom Button
   _statusWaiting(UberRequest request) {
@@ -261,7 +263,7 @@ class _RidePageState extends State<RidePage> {
       appbarMessage: "Going to the passenger",
       message: "Start trip",
       color: Color(0xff1ebbd8),
-      function: () => _startTrip(request),
+      function: () => request.startTrip(),
     );
 
     var origin = UberMarker(
@@ -285,7 +287,7 @@ class _RidePageState extends State<RidePage> {
       appbarMessage: "On a trip",
       message: "Finish trip",
       color: Color(0xff1ebbd8),
-      function: () => _finishTrip(request),
+      function: () => request.finishTrip(),
     );
 
     var origin = UberMarker(
@@ -309,6 +311,19 @@ class _RidePageState extends State<RidePage> {
       color: Color(0xff1ebbd8),
       function: () => _confirmTripEnded(request),
     );
+
+    var endTripPosition = request.destination.position;
+    _showMarker(endTripPosition, "assets/images/destination.png", "Destination arrived");
+    _moveCamera(
+      CameraPosition(
+        target: LatLng(endTripPosition.latitude, endTripPosition.longitude),
+        zoom: 19,
+      ),
+    );
+  }
+
+  _statusTripCompleted() {
+    Navigator.pushReplacementNamed(context, RouteGenerator.driverHome);
   }
 
   _updateWidgets({
